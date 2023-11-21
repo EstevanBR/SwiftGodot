@@ -251,7 +251,10 @@ class GodotMacroProcessor {
 				}
 			}
 			let pinfo = "_p\(varName)"
-			let godotArrayTypeName = "Array[\(elementTypeName)]"
+			let gType = godotVariants[elementTypeName] ?? ".object"
+			let godotArrayElementTypeName = godotArrayElementType(gType: gType)
+			
+			let godotArrayTypeName = "Array[" + (godotArrayElementTypeName ?? elementTypeName) + "]"
 			ctor.append (
 	"""
 	let \(pinfo) = PropInfo (
@@ -295,6 +298,49 @@ class GodotMacroProcessor {
         return ctor
     }
 
+}
+
+private func godotArrayElementType(gType: String) -> String? {
+	let map: [String: String] = [
+		".bool": "bool",
+		".int": "int",
+		".float": "float",
+		".string": "String",
+		".vector2": "Vector2",
+		".vector2i": "Vector2i",
+		".rect2": "Rect2",
+		".rect2i": "Rect2i",
+		".vector3": "Vector3",
+		".vector3i": "Vector3i",
+		".transform2d": "Transform2D",
+		".vector4": "Vector4",
+		".vector4i": "Vector4i",
+		".plane": "Plane",
+		".quaternion": "Quaternion",
+		".aabb": "AABB",
+		".basis": "Basis",
+		".transform3d": "Transform3D",
+		".projection": "Projection",
+		".color": "Color",
+		".stringName": "StringName",
+		".nodePath": "NodePath",
+		".rid": "RID",
+		".object": "Object",
+		".callable": "Callable",
+		".signal": "Signal",
+		".dictionary": "Dictionary",
+		".array": "Array",
+		".packedByteArray": "PackedByteArray",
+		".packedInt32Array": "PackedInt32Array",
+		".packedInt64Array": "PackedInt64Array",
+		".packedFloat32Array": "PackedFloat32Array",
+		".packedFloat64Array": "PackedFloat64Array",
+		".packedStringArray": "PackedStringArray",
+		".packedVector2Array": "PackedVector2Array",
+		".packedVector3Array": "PackedVector3Array",
+		".packedColorArray": "PackedColorArray",
+	]
+	return map[gType]
 }
 
 extension String {
