@@ -251,10 +251,14 @@ class GodotMacroProcessor {
                 }
             }
             let pinfo = "_p\(varName)"
-            let gType = godotVariants[elementTypeName] ?? ".object"
-            let godotArrayElementTypeName = godotArrayElementType(gType: gType)
+			let godotArrayElementTypeName: String
+			if let gType = godotVariants[elementTypeName], let fromGType = godotArrayElementType(gType: gType) {
+				godotArrayElementTypeName = fromGType
+			} else {
+				godotArrayElementTypeName = elementTypeName
+			}
             
-            let godotArrayTypeName = "Array[" + (godotArrayElementTypeName ?? elementTypeName) + "]"
+            let godotArrayTypeName = "Array[\(godotArrayElementTypeName)]"
             ctor.append (
     """
     let \(pinfo) = PropInfo (
