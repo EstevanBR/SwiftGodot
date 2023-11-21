@@ -190,13 +190,12 @@ class GodotMacroProcessor {
         if let optSyntax = type.as (OptionalTypeSyntax.self) {
             type = optSyntax.wrappedType
         }
-        guard let elementTypeName = type.as (ArrayTypeSyntax.self)?
-            .element
-            .as(IdentifierTypeSyntax.self)?
-            .name
-            .text else {
+		
+		guard type.isArray,
+			let elementTypeName = type.arrayElementTypeName else {
             throw GodotMacroError.unsupportedType(varDecl)
         }
+		
         let exportAttr = varDecl.attributes.first?.as(AttributeSyntax.self)
         let lel = exportAttr?.arguments?.as(LabeledExprListSyntax.self)
         let f = lel?.first?.expression.as(MemberAccessExprSyntax.self)?.declName

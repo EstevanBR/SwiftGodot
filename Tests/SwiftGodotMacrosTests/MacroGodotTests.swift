@@ -292,12 +292,12 @@ class SomeNode: Node {
         let className = StringName("SomeNode")
         let classInfo = ClassInfo<SomeNode> (name: className)
         let _pgreetings = PropInfo (
-        	propertyType: .array,
-        	propertyName: "greetings",
-        	className: StringName("Array[String]"),
-        	hint: .none,
-        	hintStr: "Array of String",
-        	usage: .default)
+            propertyType: .array,
+            propertyName: "greetings",
+            className: StringName("Array[String]"),
+            hint: .none,
+            hintStr: "Array of String",
+            usage: .default)
     	classInfo.registerMethod (name: "get_greetings", flags: .default, returnValue: _pgreetings, arguments: [], function: SomeNode._mproxy_get_greetings)
     	classInfo.registerMethod (name: "set_greetings", flags: .default, returnValue: nil, arguments: [_pgreetings], function: SomeNode._mproxy_set_greetings)
     	classInfo.registerProperty (_pgreetings, getter: "get_greetings", setter: "set_greetings")
@@ -307,6 +307,64 @@ class SomeNode: Node {
 			macros: testMacros
 		)
 	}
+
+    func testExportGenericArrayStringGodotMacro() {
+        assertMacroExpansion(
+"""
+@Godot
+class SomeNode: Node {
+	@ExportArray
+	var greetings: Array<String> = []
+}
+""",
+			expandedSource:
+"""
+class SomeNode: Node {
+	var greetings: Array<String> = []
+
+	private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+
+	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
+		return Variant(_greetingsGArray)
+	}
+
+	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
+		let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+		guard args.count > 0,
+			  let garray = GArray(args[0]),
+			  garray.isTyped(),
+			  garray.isSameTyped(array: empty) else {
+			_greetingsGArray = empty
+			return Variant(empty)
+		}
+		_greetingsGArray = garray
+		return nil
+	}
+
+    override open class var classInitializer: Void {
+        let _ = super.classInitializer
+        return _initializeClass
+    }
+
+    private static var _initializeClass: Void = {
+        let className = StringName("SomeNode")
+        let classInfo = ClassInfo<SomeNode> (name: className)
+        let _pgreetings = PropInfo (
+            propertyType: .array,
+            propertyName: "greetings",
+            className: StringName("Array[String]"),
+            hint: .none,
+            hintStr: "Array of String",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_greetings", flags: .default, returnValue: _pgreetings, arguments: [], function: SomeNode._mproxy_get_greetings)
+    	classInfo.registerMethod (name: "set_greetings", flags: .default, returnValue: nil, arguments: [_pgreetings], function: SomeNode._mproxy_set_greetings)
+    	classInfo.registerProperty (_pgreetings, getter: "get_greetings", setter: "set_greetings")
+    } ()
+}
+""",
+			macros: testMacros
+		)
+    }
 	
 	func testExportArrayStringMacro() {
 		assertMacroExpansion(
@@ -317,6 +375,39 @@ var greetings: [String] = []
 			expandedSource:
 """
 var greetings: [String] = []
+
+private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+
+func _mproxy_get_greetings(args: [Variant]) -> Variant? {
+	return Variant(_greetingsGArray)
+}
+
+func _mproxy_set_greetings(args: [Variant]) -> Variant? {
+	let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+	guard args.count > 0,
+		  let garray = GArray(args[0]),
+		  garray.isTyped(),
+		  garray.isSameTyped(array: empty) else {
+		_greetingsGArray = empty
+		return Variant(empty)
+	}
+	_greetingsGArray = garray
+	return nil
+}
+""",
+			macros: testMacros
+		)
+	}
+	
+	func testExportGenericArrayStringMacro() {
+		assertMacroExpansion(
+"""
+@ExportArray
+var greetings: Array<String> = []
+""",
+			expandedSource:
+"""
+var greetings: Array<String> = []
 
 private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
 
@@ -383,12 +474,12 @@ class SomeNode: Node {
         let className = StringName("SomeNode")
         let classInfo = ClassInfo<SomeNode> (name: className)
         let _psomeNumbers = PropInfo (
-        	propertyType: .array,
-        	propertyName: "someNumbers",
-        	className: StringName("Array[int]"),
-        	hint: .none,
-        	hintStr: "Array of Int",
-        	usage: .default)
+            propertyType: .array,
+            propertyName: "someNumbers",
+            className: StringName("Array[int]"),
+            hint: .none,
+            hintStr: "Array of Int",
+            usage: .default)
     	classInfo.registerMethod (name: "get_some_numbers", flags: .default, returnValue: _psomeNumbers, arguments: [], function: SomeNode._mproxy_get_someNumbers)
     	classInfo.registerMethod (name: "set_some_numbers", flags: .default, returnValue: nil, arguments: [_psomeNumbers], function: SomeNode._mproxy_set_someNumbers)
     	classInfo.registerProperty (_psomeNumbers, getter: "get_some_numbers", setter: "set_some_numbers")
