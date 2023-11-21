@@ -31,7 +31,7 @@ enum GodotMacroError: Error, DiagnosticMessage {
     case requiresClass
     case requiresVar
     case requiresFunction
-	case requiresArray
+    case requiresArray
     case noVariablesFound
     case noTypeFound(VariableDeclSyntax)
     case unsupportedType(VariableDeclSyntax)
@@ -50,8 +50,8 @@ enum GodotMacroError: Error, DiagnosticMessage {
             "@Export attribute can only be applied to variables"
         case .requiresFunction:
             "@Callable attribute can only be applied to functions"
-		case .requiresArray:
-			"@ExportArray can only be applied to arrays"
+        case .requiresArray:
+            "@ExportArray can only be applied to arrays"
         case .noVariablesFound:
             "@Export no variables found"
         case .noTypeFound(let v):
@@ -116,7 +116,7 @@ func hasExportAttribute (_ attrs: AttributeListSyntax?) -> Bool {
 }
 
 func hasExportArrayAttribute(_ attrs: AttributeListSyntax?) -> Bool {
-	hasAttribute("ExportArray", attrs)
+    hasAttribute("ExportArray", attrs)
 }
 
 /// True if the attribtue list syntax has an attribute name 'Callable'

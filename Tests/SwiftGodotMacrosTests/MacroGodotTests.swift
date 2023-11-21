@@ -304,10 +304,7 @@ class SomeNode: Node {
     } ()
 }
 """,
-			macros: [
-				"Godot": GodotMacro.self,
-				"ExportArray": GodotExportArray.self
-			]
+			macros: testMacros
 		)
 	}
 	
