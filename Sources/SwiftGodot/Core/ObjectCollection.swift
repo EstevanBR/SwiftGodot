@@ -8,9 +8,7 @@
 @_implementationOnly import GDExtension
 
 /// Protocol implemented by the built-in classes in Godot to allow to be wrapped in a ``Variant``
-public protocol GodotObject {
-    init (nativeHandle: UnsafeRawPointer)
-}
+public protocol GodotObject: Wrapped {}
 
 /// This represents a typed array of one of the built-in types from Godot
 public class ObjectCollection<Element: Object>: Collection {
@@ -18,7 +16,6 @@ public class ObjectCollection<Element: Object>: Collection {
     
     init (content: Int64) {
         array = GArray (content: content)
-        initType()
     }
     
     func initType () {

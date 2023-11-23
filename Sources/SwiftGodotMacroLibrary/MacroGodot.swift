@@ -390,11 +390,17 @@ public struct GodotMacro: MemberMacro {
         
         let processor = GodotMacroProcessor(classDecl: classDecl)
         do {
-            let classInit = try processor.processType ()
-            
+            let classInit = try processor.processType()
+
+            let isFinal = classDecl.modifiers
+                .map(\.name.tokenKind)
+                .contains(.keyword(.final))
+
+            let accessControlLevel = isFinal ? "public" : "open"
+
             let classInitProperty = DeclSyntax(
             """
-            override open class var classInitializer: Void {
+            override \(raw: accessControlLevel) class var classInitializer: Void {
                 let _ = super.classInitializer
                 return _initializeClass
             }
@@ -415,7 +421,7 @@ public struct GodotMacro: MemberMacro {
                     return stringName
                 }
                 
-                var implementedOverridesDecl = "override open class func implementedOverrides() -> [StringName] {\nsuper.implementedOverrides() + [\n"
+                var implementedOverridesDecl = "override \(accessControlLevel) class func implementedOverrides() -> [StringName] {\nsuper.implementedOverrides() + [\n"
                 for name in stringNames {
                     implementedOverridesDecl.append("\t\(name),\n")
                 }

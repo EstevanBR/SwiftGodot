@@ -45,7 +45,39 @@ final class MacroGodotTests: XCTestCase {
             macros: testMacros
         )
     }
-    
+
+    func testGodotMacroWithFinalClass() {
+        assertMacroExpansion(
+            """
+            @Godot final class Hi: Node {
+                override func _hasPoint(_ point: Vector2) -> Bool { false }
+            }
+            """,
+            expandedSource: """
+            final class Hi: Node {
+                override func _hasPoint(_ point: Vector2) -> Bool { false }
+
+                override public class var classInitializer: Void {
+                    let _ = super.classInitializer
+                    return _initializeClass
+                }
+
+                private static var _initializeClass: Void = {
+                    let className = StringName("Hi")
+                    let classInfo = ClassInfo<Hi> (name: className)
+                } ()
+
+                override public class func implementedOverrides() -> [StringName] {
+                    super.implementedOverrides() + [
+                    	StringName("_has_point"),
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     func testGodotVirtualMethodsMacro() {
         assertMacroExpansion(
             """
