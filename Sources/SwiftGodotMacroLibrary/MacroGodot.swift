@@ -184,16 +184,17 @@ class GodotMacroProcessor {
         guard let last = varDecl.bindings.last else {
             throw GodotMacroError.noVariablesFound
         }
+		
         guard var type = last.typeAnnotation?.type else {
             throw GodotMacroError.noTypeFound(varDecl)
         }
+		
+		guard let elementTypeName = type.arrayElementTypeName else {
+			return
+		}
+		
         if let optSyntax = type.as (OptionalTypeSyntax.self) {
             type = optSyntax.wrappedType
-        }
-		
-		guard type.isArray,
-			let elementTypeName = type.arrayElementTypeName else {
-            throw GodotMacroError.unsupportedType(varDecl)
         }
 		
         let exportAttr = varDecl.attributes.first?.as(AttributeSyntax.self)
@@ -290,9 +291,12 @@ class GodotMacroProcessor {
             // MacroExpansionDeclSyntax
             if let funcDecl = FunctionDeclSyntax(decl) {
                 try processFunction (funcDecl)
-            } else if let varDecl = VariableDeclSyntax(decl) {
-                try processVariable (varDecl)
-                try processArrayVariable(varDecl)
+			} else if let varDecl = VariableDeclSyntax(decl) {
+				if varDecl.isArray {
+					try processArrayVariable(varDecl)
+				} else {
+					try processVariable (varDecl)
+				}
             } else if let macroDecl = MacroExpansionDeclSyntax(decl) {
                 try classInitSignals(macroDecl)
             }
@@ -445,4 +449,10 @@ struct godotMacrosPlugin: CompilerPlugin {
         Texture2DLiteralMacro.self,
         SignalMacro.self
     ]
+}
+
+private extension VariableDeclSyntax {
+	var isArray: Bool {
+		bindings.last?.typeAnnotation?.type.isArray == true
+	}
 }

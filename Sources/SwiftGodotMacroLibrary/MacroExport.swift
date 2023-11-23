@@ -84,9 +84,6 @@ public struct GodotExport: PeerMacro {
             isOptional = true
             type = optSyntax.wrappedType
         }
-        guard let typeName = type.as (IdentifierTypeSyntax.self)?.name.text else {
-            throw GodotMacroError.unsupportedType(varDecl)
-        }
 
         var results: [DeclSyntax] = []
 
@@ -135,10 +132,13 @@ public struct GodotExport: PeerMacro {
 			
 			if type.isArray, let elementTypeName = type.arrayElementTypeName {
 				results.append(contentsOf: createArrayResults(varName: varName, elementTypeName: elementTypeName))
+			} else {
+				guard let typeName = type.as (IdentifierTypeSyntax.self)?.name.text else {
+					throw GodotMacroError.unsupportedType(varDecl)
+				}
+				results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, typeName: typeName, isOptional: isOptional)))
+				results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName, isOptional: isOptional)))
 			}
-			
-            results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, typeName: typeName, isOptional: isOptional)))
-            results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName, isOptional: isOptional)))
 
         }
         return results
