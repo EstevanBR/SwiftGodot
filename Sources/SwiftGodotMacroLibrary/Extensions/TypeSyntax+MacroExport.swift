@@ -1,5 +1,5 @@
 //
-//  TypeSyntax+MacroExportArray.swift
+//  TypeSyntax+MacroExport.swift
 //  
 //
 //  Created by Estevan Hernandez on 11/22/23.

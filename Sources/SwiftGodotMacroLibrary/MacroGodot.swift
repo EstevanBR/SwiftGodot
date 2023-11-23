@@ -178,7 +178,7 @@ class GodotMacroProcessor {
     }
     
     func processArrayVariable(_ varDecl: VariableDeclSyntax) throws {
-        guard hasExportArrayAttribute(varDecl.attributes) else {
+        guard hasExportAttribute(varDecl.attributes) else {
             return
         }
         guard let last = varDecl.bindings.last else {
@@ -438,7 +438,6 @@ struct godotMacrosPlugin: CompilerPlugin {
         GodotMacro.self,
         GodotCallable.self,
         GodotExport.self,
-        GodotExportArray.self,
         InitSwiftExtensionMacro.self,
         NativeHandleDiscardingMacro.self,
         PickerNameProviderMacro.self,

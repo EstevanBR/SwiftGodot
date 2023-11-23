@@ -43,9 +43,6 @@ public macro Callable() = #externalMacro(module: "SwiftGodotMacroLibrary", type:
 @attached(peer, names: prefixed(_mproxy_get_), prefixed(_mproxy_set_), arbitrary)
 public macro Export(_ hint: PropertyHint = .none, _ hintStr: String? = nil) = #externalMacro(module: "SwiftGodotMacroLibrary", type: "GodotExport")
 
-@attached(peer, names: prefixed(_mproxy_get_), prefixed(_mproxy_set_), arbitrary)
-public macro ExportArray(_ hint: PropertyHint = .none, _ hintStr: String? = nil) = #externalMacro(module: "SwiftGodotMacroLibrary", type: "GodotExportArray")
-
 // MARK: - Freestanding Macros
 
 /// A macro used to write an entrypoint for a Godot extension.

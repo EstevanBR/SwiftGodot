@@ -19,7 +19,6 @@ final class MacroGodotTests: XCTestCase {
         "Godot": GodotMacro.self,
 		"Callable": GodotCallable.self,
 		"Export": GodotExport.self,
-		"ExportArray": GodotExportArray.self,
         "signal": SignalMacro.self
     ]
     
@@ -255,7 +254,7 @@ final class MacroGodotTests: XCTestCase {
 """
 @Godot
 class SomeNode: Node {
-	@ExportArray
+	@Export
 	var greetings: [String] = []
 }
 """,
@@ -313,7 +312,7 @@ class SomeNode: Node {
 """
 @Godot
 class SomeNode: Node {
-	@ExportArray
+	@Export
 	var greetings: Array<String> = []
 }
 """,
@@ -369,7 +368,7 @@ class SomeNode: Node {
 	func testExportArrayStringMacro() {
 		assertMacroExpansion(
 """
-@ExportArray
+@Export
 var greetings: [String] = []
 """,
 			expandedSource:
@@ -402,7 +401,7 @@ func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	func testExportGenericArrayStringMacro() {
 		assertMacroExpansion(
 """
-@ExportArray
+@Export
 var greetings: Array<String> = []
 """,
 			expandedSource:
@@ -437,7 +436,7 @@ func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 """
 @Godot
 class SomeNode: Node {
-	@ExportArray
+	@Export
 	var someNumbers: [Int] = []
 }
 """,
