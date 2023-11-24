@@ -287,28 +287,66 @@ final class MacroGodotTests: XCTestCase {
 @Godot
 class SomeNode: Node {
 	@Export
-	var greetings: [String] = []
+	var greetings: [String]
 }
 """,
 			expandedSource:
 """
 class SomeNode: Node {
-	var greetings: [String] = []
+	var greetings: [String]
 
-	private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+	private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+
+	private struct TypedGArray<T: VariantRepresentable> {
+		private let gType: Variant.GType
+		private let className: StringName
+		private let empty: GArray
+
+		var gArray: GArray
+
+		private var _array: [T]
+		var array: [T] {
+			mutating get {
+				_array = gArray.compactMap {
+				    T($0)
+				}
+				return _array
+			}
+
+			mutating set {
+				_array = newValue
+				let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+				gArray = _array.reduce(into: empty) {
+				    $0.append(value: Variant($1))
+				}
+			}
+		}
+
+		init(gType: Variant.GType, _ _array: inout [T]) {
+			self.className = StringName("\\(T.self)")
+			self.gType = gType
+			self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+			self.gArray = _array.reduce(into: empty) {
+			    $0.append(value: Variant($1))
+			}
+			self._array = _array
+		}
+	}
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
 		return Variant(_greetingsGArray)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-		let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-		guard args.count > 0,
-			  let garray = GArray(args[0]),
+		guard let arg = args.first,
+			  let garray = GArray(arg),
 			  garray.isTyped(),
-			  garray.isSameTyped(array: empty) else {
-			_greetingsGArray = empty
-			return Variant(empty)
+			  garray.isSameTyped(array: _greetingsGArray),
+			  garray.allSatisfy({
+		        String($0) != nil
+		    }) else {
+			greetings = []
+			return Variant(_greetingsGArray)
 		}
 		_greetingsGArray = garray
 		return nil
@@ -339,8 +377,8 @@ class SomeNode: Node {
 		)
 	}
 
-    func testExportGenericArrayStringGodotMacro() {
-        assertMacroExpansion(
+	func testExportGenericArrayStringGodotMacro() {
+		assertMacroExpansion(
 """
 @Godot
 class SomeNode: Node {
@@ -353,20 +391,58 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var greetings: Array<String> = []
 
-	private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+	private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+
+	private struct TypedGArray<T: VariantRepresentable> {
+		private let gType: Variant.GType
+		private let className: StringName
+		private let empty: GArray
+
+		var gArray: GArray
+
+		private var _array: [T]
+		var array: [T] {
+			mutating get {
+				_array = gArray.compactMap {
+				    T($0)
+				}
+				return _array
+			}
+
+			mutating set {
+				_array = newValue
+				let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+				gArray = _array.reduce(into: empty) {
+				    $0.append(value: Variant($1))
+				}
+			}
+		}
+
+		init(gType: Variant.GType, _ _array: inout [T]) {
+			self.className = StringName("\\(T.self)")
+			self.gType = gType
+			self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+			self.gArray = _array.reduce(into: empty) {
+			    $0.append(value: Variant($1))
+			}
+			self._array = _array
+		}
+	}
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
 		return Variant(_greetingsGArray)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-		let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-		guard args.count > 0,
-			  let garray = GArray(args[0]),
+		guard let arg = args.first,
+			  let garray = GArray(arg),
 			  garray.isTyped(),
-			  garray.isSameTyped(array: empty) else {
-			_greetingsGArray = empty
-			return Variant(empty)
+			  garray.isSameTyped(array: _greetingsGArray),
+			  garray.allSatisfy({
+		        String($0) != nil
+		    }) else {
+			greetings = []
+			return Variant(_greetingsGArray)
 		}
 		_greetingsGArray = garray
 		return nil
@@ -395,7 +471,7 @@ class SomeNode: Node {
 """,
 			macros: testMacros
 		)
-    }
+	}
 	
 	func testExportArrayStringMacro() {
 		assertMacroExpansion(
@@ -405,22 +481,61 @@ var greetings: [String] = []
 """,
 			expandedSource:
 """
+
 var greetings: [String] = []
 
-private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+
+private struct TypedGArray<T: VariantRepresentable> {
+	private let gType: Variant.GType
+	private let className: StringName
+	private let empty: GArray
+
+	var gArray: GArray
+
+	private var _array: [T]
+	var array: [T] {
+		mutating get {
+			_array = gArray.compactMap {
+			    T($0)
+			}
+			return _array
+		}
+
+		mutating set {
+			_array = newValue
+			let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+			gArray = _array.reduce(into: empty) {
+			    $0.append(value: Variant($1))
+			}
+		}
+	}
+
+	init(gType: Variant.GType, _ _array: inout [T]) {
+		self.className = StringName("\\(T.self)")
+		self.gType = gType
+		self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+		self.gArray = _array.reduce(into: empty) {
+		    $0.append(value: Variant($1))
+		}
+		self._array = _array
+	}
+}
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
 	return Variant(_greetingsGArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-	let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-	guard args.count > 0,
-		  let garray = GArray(args[0]),
+	guard let arg = args.first,
+		  let garray = GArray(arg),
 		  garray.isTyped(),
-		  garray.isSameTyped(array: empty) else {
-		_greetingsGArray = empty
-		return Variant(empty)
+		  garray.isSameTyped(array: _greetingsGArray),
+		  garray.allSatisfy({
+	        String($0) != nil
+	    }) else {
+		greetings = []
+		return Variant(_greetingsGArray)
 	}
 	_greetingsGArray = garray
 	return nil
@@ -440,20 +555,58 @@ var greetings: Array<String> = []
 """
 var greetings: Array<String> = []
 
-private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+
+private struct TypedGArray<T: VariantRepresentable> {
+	private let gType: Variant.GType
+	private let className: StringName
+	private let empty: GArray
+
+	var gArray: GArray
+
+	private var _array: [T]
+	var array: [T] {
+		mutating get {
+			_array = gArray.compactMap {
+			    T($0)
+			}
+			return _array
+		}
+
+		mutating set {
+			_array = newValue
+			let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+			gArray = _array.reduce(into: empty) {
+			    $0.append(value: Variant($1))
+			}
+		}
+	}
+
+	init(gType: Variant.GType, _ _array: inout [T]) {
+		self.className = StringName("\\(T.self)")
+		self.gType = gType
+		self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+		self.gArray = _array.reduce(into: empty) {
+		    $0.append(value: Variant($1))
+		}
+		self._array = _array
+	}
+}
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
 	return Variant(_greetingsGArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-	let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-	guard args.count > 0,
-		  let garray = GArray(args[0]),
+	guard let arg = args.first,
+		  let garray = GArray(arg),
 		  garray.isTyped(),
-		  garray.isSameTyped(array: empty) else {
-		_greetingsGArray = empty
-		return Variant(empty)
+		  garray.isSameTyped(array: _greetingsGArray),
+		  garray.allSatisfy({
+	        String($0) != nil
+	    }) else {
+		greetings = []
+		return Variant(_greetingsGArray)
 	}
 	_greetingsGArray = garray
 	return nil
@@ -477,20 +630,157 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var someNumbers: [Int] = []
 
-	private var _someNumbersGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.int.rawValue), className: StringName(), script: Variant())
+	private lazy var _someNumbersGArray = TypedGArray<Int>(gType: .int, &someNumbers)
+
+	private struct TypedGArray<T: VariantRepresentable> {
+		private let gType: Variant.GType
+		private let className: StringName
+		private let empty: GArray
+
+		var gArray: GArray
+
+		private var _array: [T]
+		var array: [T] {
+			mutating get {
+				_array = gArray.compactMap {
+				    T($0)
+				}
+				return _array
+			}
+
+			mutating set {
+				_array = newValue
+				let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+				gArray = _array.reduce(into: empty) {
+				    $0.append(value: Variant($1))
+				}
+			}
+		}
+
+		init(gType: Variant.GType, _ _array: inout [T]) {
+			self.className = StringName("\\(T.self)")
+			self.gType = gType
+			self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+			self.gArray = _array.reduce(into: empty) {
+			    $0.append(value: Variant($1))
+			}
+			self._array = _array
+		}
+	}
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
 		return Variant(_someNumbersGArray)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
-		let empty = GArray(base: GArray(), type: Int32(Variant.GType.int.rawValue), className: StringName(), script: Variant())
-		guard args.count > 0,
-			  let garray = GArray(args[0]),
+		guard let arg = args.first,
+			  let garray = GArray(arg),
 			  garray.isTyped(),
-			  garray.isSameTyped(array: empty) else {
-			_someNumbersGArray = empty
-			return Variant(empty)
+			  garray.isSameTyped(array: _someNumbersGArray),
+			  garray.allSatisfy({
+		        Int($0) != nil
+		    }) else {
+			someNumbers = []
+			return Variant(_someNumbersGArray)
+		}
+		_someNumbersGArray = garray
+		return nil
+	}
+
+    override open class var classInitializer: Void {
+        let _ = super.classInitializer
+        return _initializeClass
+    }
+
+    private static var _initializeClass: Void = {
+        let className = StringName("SomeNode")
+        let classInfo = ClassInfo<SomeNode> (name: className)
+        let _psomeNumbers = PropInfo (
+            propertyType: .array,
+            propertyName: "someNumbers",
+            className: StringName("Array[int]"),
+            hint: .none,
+            hintStr: "Array of Int",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_some_numbers", flags: .default, returnValue: _psomeNumbers, arguments: [], function: SomeNode._mproxy_get_someNumbers)
+    	classInfo.registerMethod (name: "set_some_numbers", flags: .default, returnValue: nil, arguments: [_psomeNumbers], function: SomeNode._mproxy_set_someNumbers)
+    	classInfo.registerProperty (_psomeNumbers, getter: "get_some_numbers", setter: "set_some_numbers")
+    } ()
+}
+""",
+			macros: testMacros
+		)
+	}
+
+	func testExportArraysIntGodotMacro() throws {
+		throw XCTSkip("TODO: add `struct TypedGArray<T: VariantRepresentable>` to SwiftGodot, or only include it in @Godot classes with at least 1 `@Export` Array type")
+		assertMacroExpansion(
+"""
+@Godot
+class SomeNode: Node {
+	@Export
+	var someNumbers: [Int] = []
+ 	@Export
+ 	var someOtherNumbers: [Int] = []
+}
+""",
+			expandedSource:
+"""
+class SomeNode: Node {
+	var someNumbers: [Int] = []
+
+	private lazy var _someNumbersGArray = TypedGArray<Int>(gType: .int, &someNumbers)
+
+	private struct TypedGArray<T: VariantRepresentable> {
+		private let gType: Variant.GType
+		private let className: StringName
+		private let empty: GArray
+
+		var gArray: GArray
+
+		private var _array: [T]
+		var array: [T] {
+			mutating get {
+				_array = gArray.compactMap {
+				    T($0)
+				}
+				return _array
+			}
+
+			mutating set {
+				_array = newValue
+				let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+				gArray = _array.reduce(into: empty) {
+				    $0.append(value: Variant($1))
+				}
+			}
+		}
+
+		init(gType: Variant.GType, _ _array: inout [T]) {
+			self.className = StringName("\\(T.self)")
+			self.gType = gType
+			self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+			self.gArray = _array.reduce(into: empty) {
+			    $0.append(value: Variant($1))
+			}
+			self._array = _array
+		}
+	}
+
+	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
+		return Variant(_someNumbersGArray)
+	}
+
+	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
+		guard let arg = args.first,
+			  let garray = GArray(arg),
+			  garray.isTyped(),
+			  garray.isSameTyped(array: _someNumbersGArray),
+			  garray.allSatisfy({
+		        Int($0) != nil
+		    }) else {
+			someNumbers = []
+			return Variant(_someNumbersGArray)
 		}
 		_someNumbersGArray = garray
 		return nil

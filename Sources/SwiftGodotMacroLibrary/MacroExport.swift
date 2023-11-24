@@ -150,18 +150,51 @@ private extension GodotExport {
 	static func createArrayResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
 		var results: [DeclSyntax] = []
 		results.append (DeclSyntax(stringLiteral: makeGArrayVar(varName: varName, elementTypeName: elementTypeName)))
+		results.append (DeclSyntax(stringLiteral: makeTypedGArrayGenericStruct()))
 		results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName)))
 		results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, elementTypeName: elementTypeName)))
 		
 		return results
 	}
 	
-	private static func emptyGArray(elementTypeName: String) -> String {
-		"GArray(base: GArray(), type: Int32(Variant.GType\(godotVariants[elementTypeName] ?? ".object").rawValue), className: StringName(), script: Variant())"
+	private static func makeTypedGArrayGenericStruct() -> String {
+		"""
+		private struct TypedGArray<T: VariantRepresentable> {
+			private let gType: Variant.GType
+			private let className: StringName
+			private let empty: GArray
+
+			var gArray: GArray
+
+			private var _array: [T]
+			var array: [T] {
+				mutating get {
+					_array = gArray.compactMap { T($0) }
+					return _array
+				}
+
+				mutating set {
+					_array = newValue
+					let empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+					gArray = _array.reduce(into: empty) { $0.append(value: Variant($1)) }
+				}
+			}
+
+			init(gType: Variant.GType, _ _array: inout [T]) {
+				self.className = StringName("\\(T.self)")
+				self.gType = gType
+				self.empty = GArray( base: GArray(), type: Int32(gType.rawValue), className: className, script: Variant())
+				self.gArray = _array.reduce(into: empty) { $0.append(value: Variant($1)) }
+				self._array = _array
+			}
+		}
+		"""
 	}
 	
 	private static func makeGArrayVar(varName: String, elementTypeName: String) -> String {
-		"private var _\(varName)GArray: GArray = \(GodotExport.emptyGArray(elementTypeName: elementTypeName))"
+		"""
+		private lazy var _\(varName)GArray = TypedGArray<\(elementTypeName)>(gType: \(godotVariants[elementTypeName] ?? ".object"), &\(varName))
+		"""
 	}
 	
 	private static func makeGetAccessor (varName: String) -> String {
@@ -175,13 +208,13 @@ private extension GodotExport {
 	private static func makeSetAccessor (varName: String, elementTypeName: String) -> String {
 		"""
 		func _mproxy_set_\(varName)(args: [Variant]) -> Variant? {
-			let empty = \(GodotExport.emptyGArray(elementTypeName: elementTypeName))
-			guard args.count > 0,
-				  let garray = GArray(args[0]),
+			guard let arg = args.first,
+				  let garray = GArray(arg),
 				  garray.isTyped(),
-				  garray.isSameTyped(array: empty) else {
-				_\(varName)GArray = empty
-				return Variant(empty)
+				  garray.isSameTyped(array: _\(varName)GArray),
+				  garray.allSatisfy({ \(elementTypeName)($0) != nil }) else {
+				\(varName) = []
+				return Variant(_\(varName)GArray)
 			}
 			_\(varName)GArray = garray
 			return nil
