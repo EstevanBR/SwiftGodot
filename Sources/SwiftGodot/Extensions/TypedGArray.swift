@@ -9,7 +9,7 @@
 /// It acts as a wrapper for the Swift Array and manages an underlying `GArray`
 /// `@Export exportedArray: Array<Node> = []`
 public struct TypedGArray<T: VariantRepresentable> {
-	public private(set) var gArray: GArray
+	public var gArray: GArray
 
 	private var _array: [T]
 	public var array: [T] {
