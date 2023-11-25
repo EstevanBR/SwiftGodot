@@ -625,4 +625,99 @@ class SomeNode: Node {
 			macros: testMacros
 		)
 	}
+	
+	func testGodotExportTwoStringArrays() throws {
+		assertMacroExpansion(
+"""
+import SwiftGodot
+
+@Godot
+class ArrayTest: Node {
+   @Export var firstNames: [String] = ["Thelonius"]
+   @Export var lastNames: [String] = ["Monk"]
+}
+"""
+		, expandedSource:
+"""
+import SwiftGodot
+class ArrayTest: Node {
+   var firstNames: [String] = ["Thelonius"]
+
+   private lazy var _firstNamesTypedGArray = TypedGArray<String>(&firstNames)
+
+   func _mproxy_get_firstNames(args: [Variant]) -> Variant? {
+   	return Variant(_firstNamesTypedGArray.gArray)
+   }
+
+   func _mproxy_set_firstNames(args: [Variant]) -> Variant? {
+   	guard let arg = args.first,
+   		  let gArray = GArray(arg),
+   		  gArray.isTyped(),
+   		  gArray.isSameTyped(array: _firstNamesTypedGArray.gArray),
+   		  gArray.allSatisfy({
+   	        String($0) != nil
+   	    }) else {
+   		firstNames = []
+   		return Variant(_firstNamesTypedGArray.gArray)
+   	}
+   	_firstNamesTypedGArray.gArray = gArray
+   	return nil
+   }
+   var lastNames: [String] = ["Monk"]
+
+   private lazy var _lastNamesTypedGArray = TypedGArray<String>(&lastNames)
+
+   func _mproxy_get_lastNames(args: [Variant]) -> Variant? {
+   	return Variant(_lastNamesTypedGArray.gArray)
+   }
+
+   func _mproxy_set_lastNames(args: [Variant]) -> Variant? {
+   	guard let arg = args.first,
+   		  let gArray = GArray(arg),
+   		  gArray.isTyped(),
+   		  gArray.isSameTyped(array: _lastNamesTypedGArray.gArray),
+   		  gArray.allSatisfy({
+   	        String($0) != nil
+   	    }) else {
+   		lastNames = []
+   		return Variant(_lastNamesTypedGArray.gArray)
+   	}
+   	_lastNamesTypedGArray.gArray = gArray
+   	return nil
+   }
+
+    override open class var classInitializer: Void {
+        let _ = super.classInitializer
+        return _initializeClass
+    }
+
+    private static var _initializeClass: Void = {
+        let className = StringName("ArrayTest")
+        let classInfo = ClassInfo<ArrayTest> (name: className)
+        let _pfirstNames = PropInfo (
+            propertyType: .array,
+            propertyName: "firstNames",
+            className: StringName("Array[String]"),
+            hint: .none,
+            hintStr: "Array of String",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_first_names", flags: .default, returnValue: _pfirstNames, arguments: [], function: ArrayTest._mproxy_get_firstNames)
+    	classInfo.registerMethod (name: "set_first_names", flags: .default, returnValue: nil, arguments: [_pfirstNames], function: ArrayTest._mproxy_set_firstNames)
+    	classInfo.registerProperty (_pfirstNames, getter: "get_first_names", setter: "set_first_names")
+        let _plastNames = PropInfo (
+            propertyType: .array,
+            propertyName: "lastNames",
+            className: StringName("Array[String]"),
+            hint: .none,
+            hintStr: "Array of String",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_last_names", flags: .default, returnValue: _plastNames, arguments: [], function: ArrayTest._mproxy_get_lastNames)
+    	classInfo.registerMethod (name: "set_last_names", flags: .default, returnValue: nil, arguments: [_plastNames], function: ArrayTest._mproxy_set_lastNames)
+    	classInfo.registerProperty (_plastNames, getter: "get_last_names", setter: "set_last_names")
+    } ()
+}
+"""
+		, macros: testMacros
+		)
+	}
 }
