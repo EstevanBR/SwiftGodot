@@ -21,7 +21,7 @@ public struct TypedGArray<T: VariantRepresentable> {
 
 		mutating set {
 			_array = newValue
-			let empty = TypedGArray.empty()
+			let empty = GArray.empty(T.self)
 			gArray = _array.reduce(into: empty) {
 				$0.append(value: Variant($1))
 			}
@@ -29,7 +29,7 @@ public struct TypedGArray<T: VariantRepresentable> {
 	}
 
 	public init(_ array: inout [T]) {
-		self.empty = TypedGArray.empty()
+		self.empty = GArray.empty(T.self)
 		self.gArray = array.reduce(into: empty) {
 			$0.append(value: Variant($1))
 		}
@@ -37,8 +37,8 @@ public struct TypedGArray<T: VariantRepresentable> {
 	}
 }
 
-private extension TypedGArray {
-	static func empty() -> GArray {
+public extension GArray {
+	static func empty<T: VariantRepresentable>(_ type: T.Type = T.self) -> GArray {
 		GArray( base: GArray(), type: Int32(T.godotType.rawValue), className: StringName("\(T.self)"), script: Variant())
 	}
 }
