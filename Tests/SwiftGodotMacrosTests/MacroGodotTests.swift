@@ -533,7 +533,6 @@ class SomeNode: Node {
 	}
 
 	func testExportArraysIntGodotMacro() throws {
-		throw XCTSkip("TODO: add `struct TypedGArray<T: VariantRepresentable>` to SwiftGodot, or only include it in @Godot classes with at least 1 `@Export` Array type")
 		assertMacroExpansion(
 """
 @Godot
@@ -552,7 +551,7 @@ class SomeNode: Node {
 	private lazy var _someNumbersTypedGArray = TypedGArray<Int>(&someNumbers)
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		return Variant(_someNumbersGArray)
+		return Variant(_someNumbersTypedGArray.gArray)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
@@ -569,6 +568,28 @@ class SomeNode: Node {
 		_someNumbersTypedGArray.gArray = gArray
 		return nil
 	}
+ 	var someOtherNumbers: [Int] = []
+
+ 	private lazy var _someOtherNumbersTypedGArray = TypedGArray<Int>(&someOtherNumbers)
+
+ 	func _mproxy_get_someOtherNumbers(args: [Variant]) -> Variant? {
+ 		return Variant(_someOtherNumbersTypedGArray.gArray)
+ 	}
+
+ 	func _mproxy_set_someOtherNumbers(args: [Variant]) -> Variant? {
+ 		guard let arg = args.first,
+ 			  let gArray = GArray(arg),
+ 			  gArray.isTyped(),
+ 			  gArray.isSameTyped(array: _someOtherNumbersTypedGArray.gArray),
+ 			  gArray.allSatisfy({
+ 		        Int($0) != nil
+ 		    }) else {
+ 			someOtherNumbers = []
+ 			return Variant(_someOtherNumbersTypedGArray.gArray)
+ 		}
+ 		_someOtherNumbersTypedGArray.gArray = gArray
+ 		return nil
+ 	}
 
     override open class var classInitializer: Void {
         let _ = super.classInitializer
@@ -588,6 +609,16 @@ class SomeNode: Node {
     	classInfo.registerMethod (name: "get_some_numbers", flags: .default, returnValue: _psomeNumbers, arguments: [], function: SomeNode._mproxy_get_someNumbers)
     	classInfo.registerMethod (name: "set_some_numbers", flags: .default, returnValue: nil, arguments: [_psomeNumbers], function: SomeNode._mproxy_set_someNumbers)
     	classInfo.registerProperty (_psomeNumbers, getter: "get_some_numbers", setter: "set_some_numbers")
+        let _psomeOtherNumbers = PropInfo (
+            propertyType: .array,
+            propertyName: "someOtherNumbers",
+            className: StringName("Array[int]"),
+            hint: .none,
+            hintStr: "Array of Int",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_some_other_numbers", flags: .default, returnValue: _psomeOtherNumbers, arguments: [], function: SomeNode._mproxy_get_someOtherNumbers)
+    	classInfo.registerMethod (name: "set_some_other_numbers", flags: .default, returnValue: nil, arguments: [_psomeOtherNumbers], function: SomeNode._mproxy_set_someOtherNumbers)
+    	classInfo.registerProperty (_psomeOtherNumbers, getter: "get_some_other_numbers", setter: "set_some_other_numbers")
     } ()
 }
 """,
