@@ -5,12 +5,11 @@
 //  Created by Estevan Hernandez on 11/24/23.
 //
 
-/// This struct is primarily used to facilitate the `@Export` of `Array` types whose elements conform to `VariantRepresentable`
-/// It acts as a wrapper for the Swift Array and manages an underlying `GArray`
+/// This struct is primarily used to facilitate the `@Export` of `Array` types whose `Element` conforms to `VariantRepresentable`
+/// It acts as a wrapper for the underlying `GArray` which is the source of truth, but provides an interface of both `GArray` and `[T]`
 /// `@Export exportedArray: Array<Node> = []`
-public class TypedGArray<T: VariantRepresentable> {
-	public var _gArray: GArray = .empty(T.self)
-	private var _array: [T] = []
+public struct TypedGArray<T: VariantRepresentable> {
+	private var _gArray: GArray = .empty(T.self)
 	
 	public var gArray: GArray {
 		get {
@@ -19,7 +18,6 @@ public class TypedGArray<T: VariantRepresentable> {
 		
 		set {
 			_gArray = newValue
-			_array = newValue.asArray(T.self)
 		}
 	}
 	
@@ -29,13 +27,14 @@ public class TypedGArray<T: VariantRepresentable> {
 		}
 
 		set {
-			_array = newValue
 			_gArray = newValue.gArray
 		}
 	}
+	
+	public init() {}
 }
 
-public extension Array where Element: VariantRepresentable {
+private extension Array where Element: VariantRepresentable {
 	var gArray: GArray {
 		self.reduce(into: .empty(Element.self)) {
 			$0.append(value: Variant($1))

@@ -11,7 +11,7 @@ import SwiftGodotTestability
 
 final class TypedGArrayTests: GodotTestCase {
 	func testTypedGArrayHasElementAfterAppendingToArray() {
-		let sut = makeSUT(Int.self)
+		var sut = makeSUT(Int.self)
 		
 		sut.array.append(0)
 		
@@ -20,7 +20,7 @@ final class TypedGArrayTests: GodotTestCase {
 	}
 	
 	func testTypedGArrayHasElementsAfterSettingArray() {
-		let sut = makeSUT(Int.self)
+		var sut = makeSUT(Int.self)
 		
 		sut.array = [1, 2, 3]
 		
@@ -38,7 +38,7 @@ final class TypedGArrayTests: GodotTestCase {
 	}
 	
 	func testTypedGArrayHasElementsAfterSettingGArray() {
-		let sut = makeSUT(Int.self)
+		var sut = makeSUT(Int.self)
 		
 		sut.gArray = [1, 2, 3].gArray
 		
@@ -78,5 +78,13 @@ private extension GArray {
 	/// Returns an array of elements that are of type `T: VariantRepresentable`
 	func asArray<T: VariantRepresentable>(_ type: T.Type = T.self) -> [T] {
 		compactMap { .makeOrUnwrap($0) }
+	}
+}
+
+private extension Array where Element: VariantRepresentable {
+	var gArray: GArray {
+		self.reduce(into: .empty(Element.self)) {
+			$0.append(value: Variant($1))
+		}
 	}
 }
