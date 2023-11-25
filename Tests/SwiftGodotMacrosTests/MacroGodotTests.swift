@@ -295,24 +295,24 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var greetings: [String]
 
-	private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+	private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		return Variant(_greetingsGArray)
+		return Variant(_greetingsTypedGArray.gArray)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
-			  let garray = GArray(arg),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: _greetingsGArray),
-			  garray.allSatisfy({
+			  let gArray = GArray(arg),
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
+			  gArray.allSatisfy({
 		        String($0) != nil
 		    }) else {
 			greetings = []
-			return Variant(_greetingsGArray)
+			return Variant(_greetingsTypedGArray.gArray)
 		}
-		_greetingsGArray = garray
+		_greetingsTypedGArray.gArray = gArray
 		return nil
 	}
 
@@ -355,24 +355,24 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var greetings: Array<String> = []
 
-	private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+	private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		return Variant(_greetingsGArray)
+		return Variant(_greetingsTypedGArray.gArray)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
-			  let garray = GArray(arg),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: _greetingsGArray),
-			  garray.allSatisfy({
+			  let gArray = GArray(arg),
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
+			  gArray.allSatisfy({
 		        String($0) != nil
 		    }) else {
 			greetings = []
-			return Variant(_greetingsGArray)
+			return Variant(_greetingsTypedGArray.gArray)
 		}
-		_greetingsGArray = garray
+		_greetingsTypedGArray.gArray = gArray
 		return nil
 	}
 
@@ -412,24 +412,24 @@ var greetings: [String] = []
 
 var greetings: [String] = []
 
-private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	return Variant(_greetingsGArray)
+	return Variant(_greetingsTypedGArray.gArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	guard let arg = args.first,
-		  let garray = GArray(arg),
-		  garray.isTyped(),
-		  garray.isSameTyped(array: _greetingsGArray),
-		  garray.allSatisfy({
+		  let gArray = GArray(arg),
+		  gArray.isTyped(),
+		  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
+		  gArray.allSatisfy({
 	        String($0) != nil
 	    }) else {
 		greetings = []
-		return Variant(_greetingsGArray)
+		return Variant(_greetingsTypedGArray.gArray)
 	}
-	_greetingsGArray = garray
+	_greetingsTypedGArray.gArray = gArray
 	return nil
 }
 """,
@@ -447,24 +447,24 @@ var greetings: Array<String> = []
 """
 var greetings: Array<String> = []
 
-private lazy var _greetingsGArray = TypedGArray<String>(gType: .string, &greetings)
+private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	return Variant(_greetingsGArray)
+	return Variant(_greetingsTypedGArray.gArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	guard let arg = args.first,
-		  let garray = GArray(arg),
-		  garray.isTyped(),
-		  garray.isSameTyped(array: _greetingsGArray),
-		  garray.allSatisfy({
+		  let gArray = GArray(arg),
+		  gArray.isTyped(),
+		  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
+		  gArray.allSatisfy({
 	        String($0) != nil
 	    }) else {
 		greetings = []
-		return Variant(_greetingsGArray)
+		return Variant(_greetingsTypedGArray.gArray)
 	}
-	_greetingsGArray = garray
+	_greetingsTypedGArray.gArray = gArray
 	return nil
 }
 """,
@@ -486,24 +486,24 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var someNumbers: [Int] = []
 
-	private lazy var _someNumbersGArray = TypedGArray<Int>(gType: .int, &someNumbers)
+	private lazy var _someNumbersTypedGArray = TypedGArray<Int>(&someNumbers)
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		return Variant(_someNumbersGArray)
+		return Variant(_someNumbersTypedGArray.gArray)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
-			  let garray = GArray(arg),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: _someNumbersGArray),
-			  garray.allSatisfy({
+			  let gArray = GArray(arg),
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: _someNumbersTypedGArray.gArray),
+			  gArray.allSatisfy({
 		        Int($0) != nil
 		    }) else {
 			someNumbers = []
-			return Variant(_someNumbersGArray)
+			return Variant(_someNumbersTypedGArray.gArray)
 		}
-		_someNumbersGArray = garray
+		_someNumbersTypedGArray.gArray = gArray
 		return nil
 	}
 
@@ -549,7 +549,7 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var someNumbers: [Int] = []
 
-	private lazy var _someNumbersGArray = TypedGArray<Int>(gType: .int, &someNumbers)
+	private lazy var _someNumbersTypedGArray = TypedGArray<Int>(&someNumbers)
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
 		return Variant(_someNumbersGArray)
@@ -557,16 +557,16 @@ class SomeNode: Node {
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
-			  let garray = GArray(arg),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: _someNumbersGArray),
-			  garray.allSatisfy({
+			  let gArray = GArray(arg),
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: _someNumbersTypedGArray.gArray),
+			  gArray.allSatisfy({
 		        Int($0) != nil
 		    }) else {
 			someNumbers = []
-			return Variant(_someNumbersGArray)
+			return Variant(_someNumbersTypedGArray.gArray)
 		}
-		_someNumbersGArray = garray
+		_someNumbersTypedGArray.gArray = gArray
 		return nil
 	}
 

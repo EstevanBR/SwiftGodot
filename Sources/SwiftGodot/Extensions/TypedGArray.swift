@@ -6,7 +6,6 @@
 //
 
 public struct TypedGArray<T: VariantRepresentable> {
-	private let className: StringName
 	private let empty: GArray
 
 	public var gArray: GArray
@@ -29,13 +28,12 @@ public struct TypedGArray<T: VariantRepresentable> {
 		}
 	}
 
-	public init(gType: Variant.GType, _ _array: inout [T]) {
-		self.className = StringName("\(T.self)")
+	public init(_ array: inout [T]) {
 		self.empty = TypedGArray.empty()
-		self.gArray = _array.reduce(into: empty) {
+		self.gArray = array.reduce(into: empty) {
 			$0.append(value: Variant($1))
 		}
-		self._array = _array
+		self._array = array
 	}
 }
 

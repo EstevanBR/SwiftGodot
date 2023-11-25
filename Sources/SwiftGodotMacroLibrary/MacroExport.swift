@@ -158,14 +158,18 @@ private extension GodotExport {
 	
 	private static func makeGArrayVar(varName: String, elementTypeName: String) -> String {
 		"""
-		private lazy var _\(varName)GArray = TypedGArray<\(elementTypeName)>(gType: \(godotVariants[elementTypeName] ?? ".object"), &\(varName))
+		private lazy var \(typedGArray(varName: varName)) = TypedGArray<\(elementTypeName)>(&\(varName))
 		"""
+	}
+	
+	private static func typedGArray(varName: String) -> String {
+		"_\(varName)TypedGArray"
 	}
 	
 	private static func makeGetAccessor (varName: String) -> String {
 		"""
 		func _mproxy_get_\(varName)(args: [Variant]) -> Variant? {
-			return Variant(_\(varName)GArray)
+			return Variant(\(typedGArray(varName: varName)).gArray)
 		}
 		"""
 	}
@@ -174,14 +178,14 @@ private extension GodotExport {
 		"""
 		func _mproxy_set_\(varName)(args: [Variant]) -> Variant? {
 			guard let arg = args.first,
-				  let garray = GArray(arg),
-				  garray.isTyped(),
-				  garray.isSameTyped(array: _\(varName)GArray),
-				  garray.allSatisfy({ \(elementTypeName)($0) != nil }) else {
+				  let gArray = GArray(arg),
+				  gArray.isTyped(),
+				  gArray.isSameTyped(array: \(typedGArray(varName: varName)).gArray),
+				  gArray.allSatisfy({ \(elementTypeName)($0) != nil }) else {
 				\(varName) = []
-				return Variant(_\(varName)GArray)
+				return Variant(\(typedGArray(varName: varName)).gArray)
 			}
-			_\(varName)GArray = garray
+			\(typedGArray(varName: varName)).gArray = gArray
 			return nil
 		}
 		"""
