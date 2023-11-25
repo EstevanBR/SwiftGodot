@@ -158,7 +158,7 @@ private extension GodotExport {
 	
 	private static func makeGArrayVar(varName: String, elementTypeName: String) -> String {
 		"""
-		private lazy var \(typedGArray(varName: varName)) = TypedGArray<\(elementTypeName)>(&\(varName))
+		private var \(typedGArray(varName: varName)) = TypedGArray<\(elementTypeName)>()
 		"""
 	}
 	
