@@ -147,45 +147,52 @@ public struct GodotExport: PeerMacro {
 }
 
 private extension GodotExport {
+	struct ExportedArrayNames {
+		let variable: String
+		var gArray: String { "_\(variable)_GArray" }
+		let element: String
+	}
+	
 	static func createArrayResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
 		var results: [DeclSyntax] = []
-		results.append (DeclSyntax(stringLiteral: makeGArrayVar(varName: varName, elementTypeName: elementTypeName)))
-		results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName)))
-		results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, elementTypeName: elementTypeName)))
+		// for varName `"someNodes"` will produce `"_someNodes_GArray"`
+		let exportedArrayNames = ExportedArrayNames(variable: varName, element: elementTypeName)
+		results.append (DeclSyntax(stringLiteral: makeGArrayVar(names: exportedArrayNames)))
+		results.append (DeclSyntax(stringLiteral: makeGetProxyAccessor(names: exportedArrayNames)))
+		results.append (DeclSyntax(stringLiteral: makeSetProxyAccessor(names: exportedArrayNames)))
 		
 		return results
 	}
 	
-	private static func makeGArrayVar(varName: String, elementTypeName: String) -> String {
+	private static func makeGArrayVar(names: ExportedArrayNames) -> String {
 		"""
-		private var \(typedGArray(varName: varName)) = TypedGArray<\(elementTypeName)>()
-		"""
-	}
-	
-	private static func typedGArray(varName: String) -> String {
-		"_\(varName)TypedGArray"
-	}
-	
-	private static func makeGetAccessor (varName: String) -> String {
-		"""
-		func _mproxy_get_\(varName)(args: [Variant]) -> Variant? {
-			return Variant(\(typedGArray(varName: varName)).gArray)
+		private lazy var \(names.gArray): GArray = .make(\(names.variable)) {
+			didSet {
+				\(names.variable) = \(names.gArray).compactMap(\(names.element).makeOrUnwrap)
+			}
 		}
 		"""
 	}
 	
-	private static func makeSetAccessor (varName: String, elementTypeName: String) -> String {
+	private static func makeGetProxyAccessor(names: ExportedArrayNames) -> String {
 		"""
-		func _mproxy_set_\(varName)(args: [Variant]) -> Variant? {
+		func _mproxy_get_\(names.variable)(args: [Variant]) -> Variant? {
+			\(names.variable) = \(names.gArray).compactMap(\(names.element).makeOrUnwrap)
+			return Variant(\(names.gArray))
+		}
+		"""
+	}
+	
+	private static func makeSetProxyAccessor(names: ExportedArrayNames) -> String {
+		"""
+		func _mproxy_set_\(names.variable)(args: [Variant]) -> Variant? {
 			guard let arg = args.first,
 				  let gArray = GArray(arg),
-				  gArray.isTyped(),
-				  gArray.isSameTyped(array: \(typedGArray(varName: varName)).gArray),
-				  gArray.allSatisfy({ \(elementTypeName)($0) != nil }) else {
-				\(varName) = []
-				return Variant(\(typedGArray(varName: varName)).gArray)
+				  gArray.allSatisfy({ \(names.element)($0) != nil }) else {
+				\(names.variable) = []
+				return Variant(GArray.empty(\(names.element).self))
 			}
-			\(typedGArray(varName: varName)).gArray = gArray
+			\(names.gArray) = gArray
 			return nil
 		}
 		"""

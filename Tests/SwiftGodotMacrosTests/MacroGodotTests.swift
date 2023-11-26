@@ -292,27 +292,31 @@ class SomeNode: Node {
 """,
 			expandedSource:
 """
+
 class SomeNode: Node {
 	var greetings: [String]
 
-	private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
+	private lazy var _greetings_GArray: GArray = .make(greetings) {
+		didSet {
+			greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+		}
+	}
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		return Variant(_greetingsTypedGArray.gArray)
+		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+		return Variant(_greetings_GArray)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.isTyped(),
-			  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
 			  gArray.allSatisfy({
 		        String($0) != nil
 		    }) else {
 			greetings = []
-			return Variant(_greetingsTypedGArray.gArray)
+			return Variant(GArray.empty(String.self))
 		}
-		_greetingsTypedGArray.gArray = gArray
+		_greetings_GArray = gArray
 		return nil
 	}
 
@@ -352,27 +356,31 @@ class SomeNode: Node {
 """,
 			expandedSource:
 """
+
 class SomeNode: Node {
 	var greetings: Array<String> = []
 
-	private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
+	private lazy var _greetings_GArray: GArray = .make(greetings) {
+		didSet {
+			greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+		}
+	}
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		return Variant(_greetingsTypedGArray.gArray)
+		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+		return Variant(_greetings_GArray)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.isTyped(),
-			  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
 			  gArray.allSatisfy({
 		        String($0) != nil
 		    }) else {
 			greetings = []
-			return Variant(_greetingsTypedGArray.gArray)
+			return Variant(GArray.empty(String.self))
 		}
-		_greetingsTypedGArray.gArray = gArray
+		_greetings_GArray = gArray
 		return nil
 	}
 
@@ -412,24 +420,27 @@ var greetings: [String] = []
 
 var greetings: [String] = []
 
-private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
+private lazy var _greetings_GArray: GArray = .make(greetings) {
+	didSet {
+		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	}
+}
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	return Variant(_greetingsTypedGArray.gArray)
+	greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	return Variant(_greetings_GArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	guard let arg = args.first,
 		  let gArray = GArray(arg),
-		  gArray.isTyped(),
-		  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
 		  gArray.allSatisfy({
 	        String($0) != nil
 	    }) else {
 		greetings = []
-		return Variant(_greetingsTypedGArray.gArray)
+		return Variant(GArray.empty(String.self))
 	}
-	_greetingsTypedGArray.gArray = gArray
+	_greetings_GArray = gArray
 	return nil
 }
 """,
@@ -445,26 +456,30 @@ var greetings: Array<String> = []
 """,
 			expandedSource:
 """
+
 var greetings: Array<String> = []
 
-private lazy var _greetingsTypedGArray = TypedGArray<String>(&greetings)
+private lazy var _greetings_GArray: GArray = .make(greetings) {
+	didSet {
+		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	}
+}
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	return Variant(_greetingsTypedGArray.gArray)
+	greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	return Variant(_greetings_GArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	guard let arg = args.first,
 		  let gArray = GArray(arg),
-		  gArray.isTyped(),
-		  gArray.isSameTyped(array: _greetingsTypedGArray.gArray),
 		  gArray.allSatisfy({
 	        String($0) != nil
 	    }) else {
 		greetings = []
-		return Variant(_greetingsTypedGArray.gArray)
+		return Variant(GArray.empty(String.self))
 	}
-	_greetingsTypedGArray.gArray = gArray
+	_greetings_GArray = gArray
 	return nil
 }
 """,
@@ -486,24 +501,27 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var someNumbers: [Int] = []
 
-	private lazy var _someNumbersTypedGArray = TypedGArray<Int>(&someNumbers)
+	private lazy var _someNumbers_GArray: GArray = .make(someNumbers) {
+		didSet {
+			someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		}
+	}
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		return Variant(_someNumbersTypedGArray.gArray)
+		someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		return Variant(_someNumbers_GArray)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.isTyped(),
-			  gArray.isSameTyped(array: _someNumbersTypedGArray.gArray),
 			  gArray.allSatisfy({
 		        Int($0) != nil
 		    }) else {
 			someNumbers = []
-			return Variant(_someNumbersTypedGArray.gArray)
+			return Variant(GArray.empty(Int.self))
 		}
-		_someNumbersTypedGArray.gArray = gArray
+		_someNumbers_GArray = gArray
 		return nil
 	}
 
@@ -548,46 +566,52 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var someNumbers: [Int] = []
 
-	private lazy var _someNumbersTypedGArray = TypedGArray<Int>(&someNumbers)
+	private lazy var _someNumbers_GArray: GArray = .make(someNumbers) {
+		didSet {
+			someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		}
+	}
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		return Variant(_someNumbersTypedGArray.gArray)
+		someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		return Variant(_someNumbers_GArray)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.isTyped(),
-			  gArray.isSameTyped(array: _someNumbersTypedGArray.gArray),
 			  gArray.allSatisfy({
 		        Int($0) != nil
 		    }) else {
 			someNumbers = []
-			return Variant(_someNumbersTypedGArray.gArray)
+			return Variant(GArray.empty(Int.self))
 		}
-		_someNumbersTypedGArray.gArray = gArray
+		_someNumbers_GArray = gArray
 		return nil
 	}
  	var someOtherNumbers: [Int] = []
 
- 	private lazy var _someOtherNumbersTypedGArray = TypedGArray<Int>(&someOtherNumbers)
+ 	private lazy var _someOtherNumbers_GArray: GArray = .make(someOtherNumbers) {
+ 		didSet {
+ 			someOtherNumbers = _someOtherNumbers_GArray.compactMap(Int.makeOrUnwrap)
+ 		}
+ 	}
 
  	func _mproxy_get_someOtherNumbers(args: [Variant]) -> Variant? {
- 		return Variant(_someOtherNumbersTypedGArray.gArray)
+ 		someOtherNumbers = _someOtherNumbers_GArray.compactMap(Int.makeOrUnwrap)
+ 		return Variant(_someOtherNumbers_GArray)
  	}
 
  	func _mproxy_set_someOtherNumbers(args: [Variant]) -> Variant? {
  		guard let arg = args.first,
  			  let gArray = GArray(arg),
- 			  gArray.isTyped(),
- 			  gArray.isSameTyped(array: _someOtherNumbersTypedGArray.gArray),
  			  gArray.allSatisfy({
  		        Int($0) != nil
  		    }) else {
  			someOtherNumbers = []
- 			return Variant(_someOtherNumbersTypedGArray.gArray)
+ 			return Variant(GArray.empty(Int.self))
  		}
- 		_someOtherNumbersTypedGArray.gArray = gArray
+ 		_someOtherNumbers_GArray = gArray
  		return nil
  	}
 
@@ -643,46 +667,52 @@ import SwiftGodot
 class ArrayTest: Node {
    var firstNames: [String] = ["Thelonius"]
 
-   private lazy var _firstNamesTypedGArray = TypedGArray<String>(&firstNames)
+   private lazy var _firstNames_GArray: GArray = .make(firstNames) {
+   	didSet {
+   		firstNames = _firstNames_GArray.compactMap(String.makeOrUnwrap)
+   	}
+   }
 
    func _mproxy_get_firstNames(args: [Variant]) -> Variant? {
-   	return Variant(_firstNamesTypedGArray.gArray)
+   	firstNames = _firstNames_GArray.compactMap(String.makeOrUnwrap)
+   	return Variant(_firstNames_GArray)
    }
 
    func _mproxy_set_firstNames(args: [Variant]) -> Variant? {
    	guard let arg = args.first,
    		  let gArray = GArray(arg),
-   		  gArray.isTyped(),
-   		  gArray.isSameTyped(array: _firstNamesTypedGArray.gArray),
    		  gArray.allSatisfy({
    	        String($0) != nil
    	    }) else {
    		firstNames = []
-   		return Variant(_firstNamesTypedGArray.gArray)
+   		return Variant(GArray.empty(String.self))
    	}
-   	_firstNamesTypedGArray.gArray = gArray
+   	_firstNames_GArray = gArray
    	return nil
    }
    var lastNames: [String] = ["Monk"]
 
-   private lazy var _lastNamesTypedGArray = TypedGArray<String>(&lastNames)
+   private lazy var _lastNames_GArray: GArray = .make(lastNames) {
+   	didSet {
+   		lastNames = _lastNames_GArray.compactMap(String.makeOrUnwrap)
+   	}
+   }
 
    func _mproxy_get_lastNames(args: [Variant]) -> Variant? {
-   	return Variant(_lastNamesTypedGArray.gArray)
+   	lastNames = _lastNames_GArray.compactMap(String.makeOrUnwrap)
+   	return Variant(_lastNames_GArray)
    }
 
    func _mproxy_set_lastNames(args: [Variant]) -> Variant? {
    	guard let arg = args.first,
    		  let gArray = GArray(arg),
-   		  gArray.isTyped(),
-   		  gArray.isSameTyped(array: _lastNamesTypedGArray.gArray),
    		  gArray.allSatisfy({
    	        String($0) != nil
    	    }) else {
    		lastNames = []
-   		return Variant(_lastNamesTypedGArray.gArray)
+   		return Variant(GArray.empty(String.self))
    	}
-   	_lastNamesTypedGArray.gArray = gArray
+   	_lastNames_GArray = gArray
    	return nil
    }
 
