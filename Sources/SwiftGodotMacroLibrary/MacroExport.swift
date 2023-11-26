@@ -157,6 +157,8 @@ private extension GodotExport {
 		var results: [DeclSyntax] = []
 		// for varName `"someNodes"` will produce `"_someNodes_GArray"`
 		let exportedArrayNames = ExportedArrayNames(variable: varName, element: elementTypeName)
+		results.append (DeclSyntax(stringLiteral: createEmptyGArray()))
+		results.append (DeclSyntax(stringLiteral: createMakeGArray()))
 		results.append (DeclSyntax(stringLiteral: makeGArrayVar(names: exportedArrayNames)))
 		results.append (DeclSyntax(stringLiteral: makeGetProxyAccessor(names: exportedArrayNames)))
 		results.append (DeclSyntax(stringLiteral: makeSetProxyAccessor(names: exportedArrayNames)))
@@ -164,9 +166,32 @@ private extension GodotExport {
 		return results
 	}
 	
+	static func createEmptyGArray() -> String {
+		"""
+		private func empty<T: VariantRepresentable>(_ type: T.Type = T.self) -> GArray {
+			GArray(
+				base: GArray(),
+				type: Int32(T.godotType.rawValue),
+				className: T.godotType == .object ? StringName("\\(T.self)") : StringName(),
+				script: Variant()
+			)
+		}
+		"""
+	}
+	
+	static func createMakeGArray() -> String {
+		"""
+		private func make<T: VariantRepresentable>(_ array: [T]) -> GArray {
+			array.reduce(into: empty(T.self)) {
+				$0.append(value: Variant($1))
+			}
+		}
+		"""
+	}
+	
 	private static func makeGArrayVar(names: ExportedArrayNames) -> String {
 		"""
-		private lazy var \(names.gArray): GArray = .make(\(names.variable)) {
+		private lazy var \(names.gArray): GArray = \(names.variable).reduce(into: empty(\(names.element).self)) { $0.append(value: Variant($1)) } { {
 			didSet {
 				\(names.variable) = \(names.gArray).compactMap(\(names.element).makeOrUnwrap)
 			}
@@ -190,7 +215,7 @@ private extension GodotExport {
 				  let gArray = GArray(arg),
 				  gArray.allSatisfy({ \(names.element)($0) != nil }) else {
 				\(names.variable) = []
-				return Variant(GArray.empty(\(names.element).self))
+				return Variant(empty)
 			}
 			\(names.gArray) = gArray
 			return nil
@@ -198,3 +223,26 @@ private extension GodotExport {
 		"""
 	}
 }
+
+//extension GArray {
+//	/// Creates an empty typed GArray whose elements conform to `VariantRepresentable`
+//	static func empty<T: VariantRepresentable>(_ type: T.Type = T.self) -> GArray {
+//		GArray(
+//			base: GArray(),
+//			type: Int32(T.godotType.rawValue),
+//			className: T.godotType == .object ? StringName("\(T.self)") : StringName(),
+//			script: Variant()
+//		)
+//	}
+//
+//	/// Creates a GArray whose elements are from the passed array, and whose elements conform to `VariantRepresentable`
+//	static func make<T: VariantRepresentable>(_ array: [T]) -> GArray {
+//		array.reduce(into: empty(T.self)) {
+//			$0.append(value: Variant($1))
+//		}
+//	}
+//}
+//
+//extension Array where Element: VariantRepresentable {
+//	var gArray: GArray { self.reduce(into: .empty(Element.self)) { $0.append(value: Variant($1)) } }
+//}
