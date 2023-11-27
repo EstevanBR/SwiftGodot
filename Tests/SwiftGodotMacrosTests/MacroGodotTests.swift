@@ -281,36 +281,77 @@ final class MacroGodotTests: XCTestCase {
 		)
 	}
 	
-	func testExportArrayStringGodotMacro() {
+	func testExportArrayStringGodotMacroFails() {
+		assertMacroExpansion(
+			"""
+			@Godot
+			class SomeNode: Node {
+				@Export
+				var greetings: [String]
+			}
+			""",
+		expandedSource:
+			"""
+
+			class SomeNode: Node {
+				var greetings: [String]
+			}
+			""",
+			diagnostics: [
+				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 3, column: 2),
+				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 1, column: 1)
+			],
+			macros: testMacros
+		)
+	}
+	
+	func testExportArrayStringMacroFails() {
+		assertMacroExpansion(
+			"""
+			@Export
+			var greetings: [String]
+			""",
+		expandedSource:
+			"""
+
+			var greetings: [String]
+			""",
+			diagnostics: [
+				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 1, column: 1)
+			],
+			macros: testMacros
+		)
+	}
+
+	func testExportGenericArrayStringGodotMacro() {
 		assertMacroExpansion(
 """
 @Godot
 class SomeNode: Node {
 	@Export
-	var greetings: [String] = []
+	var greetings: VariantCollection<String> = []
 }
 """,
 			expandedSource:
 """
-class SomeNode: Node {
-	var greetings: [String] = []
 
-	private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+
+class SomeNode: Node {
+	var greetings: VariantCollection<String> = []
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		return Variant(_greetingsGArray)
+		return Variant(greetings.array)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-		let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-		guard args.count > 0,
-			  let garray = GArray(args[0]),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: empty) else {
-			_greetingsGArray = empty
-			return Variant(empty)
+		guard let arg = args.first,
+			  let gArray = GArray(arg),
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: GArray(String.self)),
+			  let variantCollection = VariantCollection<String>(Variant(gArray)) else {
+			return nil
 		}
-		_greetingsGArray = garray
+		greetings = variantCollection
 		return nil
 	}
 
@@ -338,64 +379,6 @@ class SomeNode: Node {
 			macros: testMacros
 		)
 	}
-
-    func testExportGenericArrayStringGodotMacro() {
-        assertMacroExpansion(
-"""
-@Godot
-class SomeNode: Node {
-	@Export
-	var greetings: Array<String> = []
-}
-""",
-			expandedSource:
-"""
-class SomeNode: Node {
-	var greetings: Array<String> = []
-
-	private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-
-	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		return Variant(_greetingsGArray)
-	}
-
-	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-		let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-		guard args.count > 0,
-			  let garray = GArray(args[0]),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: empty) else {
-			_greetingsGArray = empty
-			return Variant(empty)
-		}
-		_greetingsGArray = garray
-		return nil
-	}
-
-    override open class var classInitializer: Void {
-        let _ = super.classInitializer
-        return _initializeClass
-    }
-
-    private static var _initializeClass: Void = {
-        let className = StringName("SomeNode")
-        let classInfo = ClassInfo<SomeNode> (name: className)
-        let _pgreetings = PropInfo (
-            propertyType: .array,
-            propertyName: "greetings",
-            className: StringName("Array[String]"),
-            hint: .none,
-            hintStr: "Array of String",
-            usage: .default)
-    	classInfo.registerMethod (name: "get_greetings", flags: .default, returnValue: _pgreetings, arguments: [], function: SomeNode._mproxy_get_greetings)
-    	classInfo.registerMethod (name: "set_greetings", flags: .default, returnValue: nil, arguments: [_pgreetings], function: SomeNode._mproxy_set_greetings)
-    	classInfo.registerProperty (_pgreetings, getter: "get_greetings", setter: "set_greetings")
-    } ()
-}
-""",
-			macros: testMacros
-		)
-    }
 	
 	func testExportArrayStringMacro() {
 		assertMacroExpansion(
@@ -405,24 +388,30 @@ var greetings: [String] = []
 """,
 			expandedSource:
 """
+
 var greetings: [String] = []
 
-private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+private lazy var _greetings_GArray: GArray = .make(greetings) {
+	didSet {
+		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	}
+}
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	return Variant(_greetingsGArray)
+	greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	return Variant(_greetings_GArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-	let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-	guard args.count > 0,
-		  let garray = GArray(args[0]),
-		  garray.isTyped(),
-		  garray.isSameTyped(array: empty) else {
-		_greetingsGArray = empty
-		return Variant(empty)
+	guard let arg = args.first,
+		  let gArray = GArray(arg),
+		  gArray.allSatisfy({
+	        String($0) != nil
+	    }) else {
+		greetings = []
+		return Variant(GArray.empty(String.self))
 	}
-	_greetingsGArray = garray
+	_greetings_GArray = gArray
 	return nil
 }
 """,
@@ -438,24 +427,30 @@ var greetings: Array<String> = []
 """,
 			expandedSource:
 """
+
 var greetings: Array<String> = []
 
-private var _greetingsGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
+private lazy var _greetings_GArray: GArray = .make(greetings) {
+	didSet {
+		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	}
+}
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	return Variant(_greetingsGArray)
+	greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
+	return Variant(_greetings_GArray)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-	let empty = GArray(base: GArray(), type: Int32(Variant.GType.string.rawValue), className: StringName(), script: Variant())
-	guard args.count > 0,
-		  let garray = GArray(args[0]),
-		  garray.isTyped(),
-		  garray.isSameTyped(array: empty) else {
-		_greetingsGArray = empty
-		return Variant(empty)
+	guard let arg = args.first,
+		  let gArray = GArray(arg),
+		  gArray.allSatisfy({
+	        String($0) != nil
+	    }) else {
+		greetings = []
+		return Variant(GArray.empty(String.self))
 	}
-	_greetingsGArray = garray
+	_greetings_GArray = gArray
 	return nil
 }
 """,
@@ -477,22 +472,27 @@ class SomeNode: Node {
 class SomeNode: Node {
 	var someNumbers: [Int] = []
 
-	private var _someNumbersGArray: GArray = GArray(base: GArray(), type: Int32(Variant.GType.int.rawValue), className: StringName(), script: Variant())
+	private lazy var _someNumbers_GArray: GArray = .make(someNumbers) {
+		didSet {
+			someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		}
+	}
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		return Variant(_someNumbersGArray)
+		someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		return Variant(_someNumbers_GArray)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
-		let empty = GArray(base: GArray(), type: Int32(Variant.GType.int.rawValue), className: StringName(), script: Variant())
-		guard args.count > 0,
-			  let garray = GArray(args[0]),
-			  garray.isTyped(),
-			  garray.isSameTyped(array: empty) else {
-			_someNumbersGArray = empty
-			return Variant(empty)
+		guard let arg = args.first,
+			  let gArray = GArray(arg),
+			  gArray.allSatisfy({
+		        Int($0) != nil
+		    }) else {
+			someNumbers = []
+			return Variant(GArray.empty(Int.self))
 		}
-		_someNumbersGArray = garray
+		_someNumbers_GArray = gArray
 		return nil
 	}
 
@@ -518,6 +518,207 @@ class SomeNode: Node {
 }
 """,
 			macros: testMacros
+		)
+	}
+
+	func testExportArraysIntGodotMacro() throws {
+		assertMacroExpansion(
+"""
+@Godot
+class SomeNode: Node {
+	@Export
+	var someNumbers: [Int] = []
+ 	@Export
+ 	var someOtherNumbers: [Int] = []
+}
+""",
+			expandedSource:
+"""
+class SomeNode: Node {
+	var someNumbers: [Int] = []
+
+	private lazy var _someNumbers_GArray: GArray = .make(someNumbers) {
+		didSet {
+			someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		}
+	}
+
+	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
+		someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
+		return Variant(_someNumbers_GArray)
+	}
+
+	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
+		guard let arg = args.first,
+			  let gArray = GArray(arg),
+			  gArray.allSatisfy({
+		        Int($0) != nil
+		    }) else {
+			someNumbers = []
+			return Variant(GArray.empty(Int.self))
+		}
+		_someNumbers_GArray = gArray
+		return nil
+	}
+ 	var someOtherNumbers: [Int] = []
+
+ 	private lazy var _someOtherNumbers_GArray: GArray = .make(someOtherNumbers) {
+ 		didSet {
+ 			someOtherNumbers = _someOtherNumbers_GArray.compactMap(Int.makeOrUnwrap)
+ 		}
+ 	}
+
+ 	func _mproxy_get_someOtherNumbers(args: [Variant]) -> Variant? {
+ 		someOtherNumbers = _someOtherNumbers_GArray.compactMap(Int.makeOrUnwrap)
+ 		return Variant(_someOtherNumbers_GArray)
+ 	}
+
+ 	func _mproxy_set_someOtherNumbers(args: [Variant]) -> Variant? {
+ 		guard let arg = args.first,
+ 			  let gArray = GArray(arg),
+ 			  gArray.allSatisfy({
+ 		        Int($0) != nil
+ 		    }) else {
+ 			someOtherNumbers = []
+ 			return Variant(GArray.empty(Int.self))
+ 		}
+ 		_someOtherNumbers_GArray = gArray
+ 		return nil
+ 	}
+
+    override open class var classInitializer: Void {
+        let _ = super.classInitializer
+        return _initializeClass
+    }
+
+    private static var _initializeClass: Void = {
+        let className = StringName("SomeNode")
+        let classInfo = ClassInfo<SomeNode> (name: className)
+        let _psomeNumbers = PropInfo (
+            propertyType: .array,
+            propertyName: "someNumbers",
+            className: StringName("Array[int]"),
+            hint: .none,
+            hintStr: "Array of Int",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_some_numbers", flags: .default, returnValue: _psomeNumbers, arguments: [], function: SomeNode._mproxy_get_someNumbers)
+    	classInfo.registerMethod (name: "set_some_numbers", flags: .default, returnValue: nil, arguments: [_psomeNumbers], function: SomeNode._mproxy_set_someNumbers)
+    	classInfo.registerProperty (_psomeNumbers, getter: "get_some_numbers", setter: "set_some_numbers")
+        let _psomeOtherNumbers = PropInfo (
+            propertyType: .array,
+            propertyName: "someOtherNumbers",
+            className: StringName("Array[int]"),
+            hint: .none,
+            hintStr: "Array of Int",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_some_other_numbers", flags: .default, returnValue: _psomeOtherNumbers, arguments: [], function: SomeNode._mproxy_get_someOtherNumbers)
+    	classInfo.registerMethod (name: "set_some_other_numbers", flags: .default, returnValue: nil, arguments: [_psomeOtherNumbers], function: SomeNode._mproxy_set_someOtherNumbers)
+    	classInfo.registerProperty (_psomeOtherNumbers, getter: "get_some_other_numbers", setter: "set_some_other_numbers")
+    } ()
+}
+""",
+			macros: testMacros
+		)
+	}
+	
+	func testGodotExportTwoStringArrays() throws {
+		assertMacroExpansion(
+"""
+import SwiftGodot
+
+@Godot
+class ArrayTest: Node {
+   @Export var firstNames: [String] = ["Thelonius"]
+   @Export var lastNames: [String] = ["Monk"]
+}
+"""
+		, expandedSource:
+"""
+import SwiftGodot
+class ArrayTest: Node {
+   var firstNames: [String] = ["Thelonius"]
+
+   private lazy var _firstNames_GArray: GArray = .make(firstNames) {
+   	didSet {
+   		firstNames = _firstNames_GArray.compactMap(String.makeOrUnwrap)
+   	}
+   }
+
+   func _mproxy_get_firstNames(args: [Variant]) -> Variant? {
+   	firstNames = _firstNames_GArray.compactMap(String.makeOrUnwrap)
+   	return Variant(_firstNames_GArray)
+   }
+
+   func _mproxy_set_firstNames(args: [Variant]) -> Variant? {
+   	guard let arg = args.first,
+   		  let gArray = GArray(arg),
+   		  gArray.allSatisfy({
+   	        String($0) != nil
+   	    }) else {
+   		firstNames = []
+   		return Variant(GArray.empty(String.self))
+   	}
+   	_firstNames_GArray = gArray
+   	return nil
+   }
+   var lastNames: [String] = ["Monk"]
+
+   private lazy var _lastNames_GArray: GArray = .make(lastNames) {
+   	didSet {
+   		lastNames = _lastNames_GArray.compactMap(String.makeOrUnwrap)
+   	}
+   }
+
+   func _mproxy_get_lastNames(args: [Variant]) -> Variant? {
+   	lastNames = _lastNames_GArray.compactMap(String.makeOrUnwrap)
+   	return Variant(_lastNames_GArray)
+   }
+
+   func _mproxy_set_lastNames(args: [Variant]) -> Variant? {
+   	guard let arg = args.first,
+   		  let gArray = GArray(arg),
+   		  gArray.allSatisfy({
+   	        String($0) != nil
+   	    }) else {
+   		lastNames = []
+   		return Variant(GArray.empty(String.self))
+   	}
+   	_lastNames_GArray = gArray
+   	return nil
+   }
+
+    override open class var classInitializer: Void {
+        let _ = super.classInitializer
+        return _initializeClass
+    }
+
+    private static var _initializeClass: Void = {
+        let className = StringName("ArrayTest")
+        let classInfo = ClassInfo<ArrayTest> (name: className)
+        let _pfirstNames = PropInfo (
+            propertyType: .array,
+            propertyName: "firstNames",
+            className: StringName("Array[String]"),
+            hint: .none,
+            hintStr: "Array of String",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_first_names", flags: .default, returnValue: _pfirstNames, arguments: [], function: ArrayTest._mproxy_get_firstNames)
+    	classInfo.registerMethod (name: "set_first_names", flags: .default, returnValue: nil, arguments: [_pfirstNames], function: ArrayTest._mproxy_set_firstNames)
+    	classInfo.registerProperty (_pfirstNames, getter: "get_first_names", setter: "set_first_names")
+        let _plastNames = PropInfo (
+            propertyType: .array,
+            propertyName: "lastNames",
+            className: StringName("Array[String]"),
+            hint: .none,
+            hintStr: "Array of String",
+            usage: .default)
+    	classInfo.registerMethod (name: "get_last_names", flags: .default, returnValue: _plastNames, arguments: [], function: ArrayTest._mproxy_get_lastNames)
+    	classInfo.registerMethod (name: "set_last_names", flags: .default, returnValue: nil, arguments: [_plastNames], function: ArrayTest._mproxy_set_lastNames)
+    	classInfo.registerProperty (_plastNames, getter: "get_last_names", setter: "set_last_names")
+    } ()
+}
+"""
+		, macros: testMacros
 		)
 	}
 }
