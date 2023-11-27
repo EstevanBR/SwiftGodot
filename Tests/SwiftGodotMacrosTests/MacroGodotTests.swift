@@ -335,7 +335,6 @@ class SomeNode: Node {
 			expandedSource:
 """
 
-
 class SomeNode: Node {
 	var greetings: VariantCollection<String> = []
 
@@ -347,11 +346,10 @@ class SomeNode: Node {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
 			  gArray.isTyped(),
-			  gArray.isSameTyped(array: GArray(String.self)),
-			  let variantCollection = VariantCollection<String>(Variant(gArray)) else {
+			  gArray.isSameTyped(array: GArray(String.self)) else {
 			return nil
 		}
-		greetings = variantCollection
+		greetings.array = gArray
 		return nil
 	}
 
@@ -383,35 +381,25 @@ class SomeNode: Node {
 	func testExportArrayStringMacro() {
 		assertMacroExpansion(
 """
-@Export
-var greetings: [String] = []
+@Export var greetings: VariantCollection<String> = []
 """,
 			expandedSource:
 """
 
-var greetings: [String] = []
-
-private lazy var _greetings_GArray: GArray = .make(greetings) {
-	didSet {
-		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-	}
-}
+var greetings: VariantCollection<String> = []
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-	return Variant(_greetings_GArray)
+	return Variant(greetings.array)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	guard let arg = args.first,
 		  let gArray = GArray(arg),
-		  gArray.allSatisfy({
-	        String($0) != nil
-	    }) else {
-		greetings = []
-		return Variant(GArray.empty(String.self))
+		  gArray.isTyped(),
+		  gArray.isSameTyped(array: GArray(String.self)) else {
+		return nil
 	}
-	_greetings_GArray = gArray
+	greetings.array = gArray
 	return nil
 }
 """,
@@ -422,35 +410,25 @@ func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	func testExportGenericArrayStringMacro() {
 		assertMacroExpansion(
 """
-@Export
-var greetings: Array<String> = []
+@Export var greetings: VariantCollection<String> = []
 """,
 			expandedSource:
 """
 
-var greetings: Array<String> = []
-
-private lazy var _greetings_GArray: GArray = .make(greetings) {
-	didSet {
-		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-	}
-}
+var greetings: VariantCollection<String> = []
 
 func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-	greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-	return Variant(_greetings_GArray)
+	return Variant(greetings.array)
 }
 
 func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 	guard let arg = args.first,
 		  let gArray = GArray(arg),
-		  gArray.allSatisfy({
-	        String($0) != nil
-	    }) else {
-		greetings = []
-		return Variant(GArray.empty(String.self))
+		  gArray.isTyped(),
+		  gArray.isSameTyped(array: GArray(String.self)) else {
+		return nil
 	}
-	_greetings_GArray = gArray
+	greetings.array = gArray
 	return nil
 }
 """,
@@ -463,36 +441,27 @@ func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 """
 @Godot
 class SomeNode: Node {
-	@Export
-	var someNumbers: [Int] = []
+	@Export var someNumbers: VariantCollection<Int> = []
 }
 """,
 			expandedSource:
 """
-class SomeNode: Node {
-	var someNumbers: [Int] = []
 
-	private lazy var _someNumbers_GArray: GArray = .make(someNumbers) {
-		didSet {
-			someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
-		}
-	}
+class SomeNode: Node {
+	var someNumbers: VariantCollection<Int> = []
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
-		return Variant(_someNumbers_GArray)
+		return Variant(someNumbers.array)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.allSatisfy({
-		        Int($0) != nil
-		    }) else {
-			someNumbers = []
-			return Variant(GArray.empty(Int.self))
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: GArray(Int.self)) else {
+			return nil
 		}
-		_someNumbers_GArray = gArray
+		someNumbers.array = gArray
 		return nil
 	}
 
@@ -506,7 +475,7 @@ class SomeNode: Node {
         let classInfo = ClassInfo<SomeNode> (name: className)
         let _psomeNumbers = PropInfo (
             propertyType: .array,
-            propertyName: "someNumbers",
+            propertyName: "some_numbers",
             className: StringName("Array[int]"),
             hint: .none,
             hintStr: "Array of Int",
@@ -526,63 +495,44 @@ class SomeNode: Node {
 """
 @Godot
 class SomeNode: Node {
-	@Export
-	var someNumbers: [Int] = []
- 	@Export
- 	var someOtherNumbers: [Int] = []
+	@Export var someNumbers: VariantCollection<Int> = []
+ 	@Export var someOtherNumbers: VariantCollection<Int> = []
 }
 """,
 			expandedSource:
 """
-class SomeNode: Node {
-	var someNumbers: [Int] = []
 
-	private lazy var _someNumbers_GArray: GArray = .make(someNumbers) {
-		didSet {
-			someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
-		}
-	}
+class SomeNode: Node {
+	var someNumbers: VariantCollection<Int> = []
 
 	func _mproxy_get_someNumbers(args: [Variant]) -> Variant? {
-		someNumbers = _someNumbers_GArray.compactMap(Int.makeOrUnwrap)
-		return Variant(_someNumbers_GArray)
+		return Variant(someNumbers.array)
 	}
 
 	func _mproxy_set_someNumbers(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.allSatisfy({
-		        Int($0) != nil
-		    }) else {
-			someNumbers = []
-			return Variant(GArray.empty(Int.self))
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: GArray(Int.self)) else {
+			return nil
 		}
-		_someNumbers_GArray = gArray
+		someNumbers.array = gArray
 		return nil
 	}
- 	var someOtherNumbers: [Int] = []
-
- 	private lazy var _someOtherNumbers_GArray: GArray = .make(someOtherNumbers) {
- 		didSet {
- 			someOtherNumbers = _someOtherNumbers_GArray.compactMap(Int.makeOrUnwrap)
- 		}
- 	}
+ 	var someOtherNumbers: VariantCollection<Int> = []
 
  	func _mproxy_get_someOtherNumbers(args: [Variant]) -> Variant? {
- 		someOtherNumbers = _someOtherNumbers_GArray.compactMap(Int.makeOrUnwrap)
- 		return Variant(_someOtherNumbers_GArray)
+ 		return Variant(someOtherNumbers.array)
  	}
 
  	func _mproxy_set_someOtherNumbers(args: [Variant]) -> Variant? {
  		guard let arg = args.first,
  			  let gArray = GArray(arg),
- 			  gArray.allSatisfy({
- 		        Int($0) != nil
- 		    }) else {
- 			someOtherNumbers = []
- 			return Variant(GArray.empty(Int.self))
+ 			  gArray.isTyped(),
+ 			  gArray.isSameTyped(array: GArray(Int.self)) else {
+ 			return nil
  		}
- 		_someOtherNumbers_GArray = gArray
+ 		someOtherNumbers.array = gArray
  		return nil
  	}
 
@@ -596,7 +546,7 @@ class SomeNode: Node {
         let classInfo = ClassInfo<SomeNode> (name: className)
         let _psomeNumbers = PropInfo (
             propertyType: .array,
-            propertyName: "someNumbers",
+            propertyName: "some_numbers",
             className: StringName("Array[int]"),
             hint: .none,
             hintStr: "Array of Int",
@@ -606,7 +556,7 @@ class SomeNode: Node {
     	classInfo.registerProperty (_psomeNumbers, getter: "get_some_numbers", setter: "set_some_numbers")
         let _psomeOtherNumbers = PropInfo (
             propertyType: .array,
-            propertyName: "someOtherNumbers",
+            propertyName: "some_other_numbers",
             className: StringName("Array[int]"),
             hint: .none,
             hintStr: "Array of Int",
@@ -628,62 +578,44 @@ import SwiftGodot
 
 @Godot
 class ArrayTest: Node {
-   @Export var firstNames: [String] = ["Thelonius"]
-   @Export var lastNames: [String] = ["Monk"]
+   @Export var firstNames: VariantCollection<String> = ["Thelonius"]
+   @Export var lastNames: VariantCollection<String> = ["Monk"]
 }
 """
 		, expandedSource:
 """
 import SwiftGodot
 class ArrayTest: Node {
-   var firstNames: [String] = ["Thelonius"]
-
-   private lazy var _firstNames_GArray: GArray = .make(firstNames) {
-   	didSet {
-   		firstNames = _firstNames_GArray.compactMap(String.makeOrUnwrap)
-   	}
-   }
+   var firstNames: VariantCollection<String> = ["Thelonius"]
 
    func _mproxy_get_firstNames(args: [Variant]) -> Variant? {
-   	firstNames = _firstNames_GArray.compactMap(String.makeOrUnwrap)
-   	return Variant(_firstNames_GArray)
+   	return Variant(firstNames.array)
    }
 
    func _mproxy_set_firstNames(args: [Variant]) -> Variant? {
    	guard let arg = args.first,
    		  let gArray = GArray(arg),
-   		  gArray.allSatisfy({
-   	        String($0) != nil
-   	    }) else {
-   		firstNames = []
-   		return Variant(GArray.empty(String.self))
+   		  gArray.isTyped(),
+   		  gArray.isSameTyped(array: GArray(String.self)) else {
+   		return nil
    	}
-   	_firstNames_GArray = gArray
+   	firstNames.array = gArray
    	return nil
    }
-   var lastNames: [String] = ["Monk"]
-
-   private lazy var _lastNames_GArray: GArray = .make(lastNames) {
-   	didSet {
-   		lastNames = _lastNames_GArray.compactMap(String.makeOrUnwrap)
-   	}
-   }
+   var lastNames: VariantCollection<String> = ["Monk"]
 
    func _mproxy_get_lastNames(args: [Variant]) -> Variant? {
-   	lastNames = _lastNames_GArray.compactMap(String.makeOrUnwrap)
-   	return Variant(_lastNames_GArray)
+   	return Variant(lastNames.array)
    }
 
    func _mproxy_set_lastNames(args: [Variant]) -> Variant? {
    	guard let arg = args.first,
    		  let gArray = GArray(arg),
-   		  gArray.allSatisfy({
-   	        String($0) != nil
-   	    }) else {
-   		lastNames = []
-   		return Variant(GArray.empty(String.self))
+   		  gArray.isTyped(),
+   		  gArray.isSameTyped(array: GArray(String.self)) else {
+   		return nil
    	}
-   	_lastNames_GArray = gArray
+   	lastNames.array = gArray
    	return nil
    }
 
@@ -697,7 +629,7 @@ class ArrayTest: Node {
         let classInfo = ClassInfo<ArrayTest> (name: className)
         let _pfirstNames = PropInfo (
             propertyType: .array,
-            propertyName: "firstNames",
+            propertyName: "first_names",
             className: StringName("Array[String]"),
             hint: .none,
             hintStr: "Array of String",
@@ -707,7 +639,7 @@ class ArrayTest: Node {
     	classInfo.registerProperty (_pfirstNames, getter: "get_first_names", setter: "set_first_names")
         let _plastNames = PropInfo (
             propertyType: .array,
-            propertyName: "lastNames",
+            propertyName: "last_names",
             className: StringName("Array[String]"),
             hint: .none,
             hintStr: "Array of String",
