@@ -11,7 +11,7 @@
 public class VariantCollection<Element: VariantStorable>: Collection, ExpressibleByArrayLiteral {
     public typealias ArrayLiteralElement = Element
     
-    public var array: GArray
+    public let array: GArray
 
     public required init(arrayLiteral elements: ArrayLiteralElement...) {
         array = .init(elements.map { $0 })
@@ -109,7 +109,9 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     
     /// Appends an element at the end of the array (alias of ``pushBack(value:)``).
     public final func append (value: Element) {
+		GD.printDebug("will append: \(value) to \(array.asArray(Element.self))")
         array.append (value: Variant(value))
+		GD.printDebug("did append: \(value) now \(array.asArray(Element.self))")
     }
     
     /// Resizes the array to contain a different number of elements. If the array size is smaller, elements are cleared, if bigger, new elements are `null`. Returns ``GodotError/ok`` on success, or one of the other ``GodotError`` values if the operation failed.
