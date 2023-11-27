@@ -85,7 +85,13 @@ public struct GodotExport: PeerMacro {
             type = optSyntax.wrappedType
         }
 		
-		guard type.isArray || type.is(IdentifierTypeSyntax.self) else {
+		guard type.isArray == false else {
+			let classError = Diagnostic(node: declaration.root, message: GodotMacroError.requiresVariantCollection)
+			context.diagnose(classError)
+			return []
+		}
+		
+		guard type.is(IdentifierTypeSyntax.self) else {
 			throw GodotMacroError.unsupportedType(varDecl)
 		}
 
@@ -134,8 +140,8 @@ public struct GodotExport: PeerMacro {
                 }
             }
 			
-			if type.isArray, let elementTypeName = type.arrayElementTypeName {
-				results.append(contentsOf: createArrayResults(varName: varName, elementTypeName: elementTypeName))
+			if type.isVariantCollection, let elementTypeName = type.variantCollectionElementTypeName {
+				results.append(contentsOf: createVariantCollectionResults(varName: varName, elementTypeName: elementTypeName))
 			} else if let typeName = type.as(IdentifierTypeSyntax.self)?.name.text {
 				results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, typeName: typeName, isOptional: isOptional)))
 				results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName, isOptional: isOptional)))
@@ -147,102 +153,35 @@ public struct GodotExport: PeerMacro {
 }
 
 private extension GodotExport {
-	struct ExportedArrayNames {
-		let variable: String
-		var gArray: String { "_\(variable)_GArray" }
-		let element: String
-	}
-	
-	static func createArrayResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
+	static func createVariantCollectionResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
 		var results: [DeclSyntax] = []
-		// for varName `"someNodes"` will produce `"_someNodes_GArray"`
-		let exportedArrayNames = ExportedArrayNames(variable: varName, element: elementTypeName)
-		// results.append (DeclSyntax(stringLiteral: createEmptyGArray()))
-		// results.append (DeclSyntax(stringLiteral: createMakeGArray()))
-		results.append (DeclSyntax(stringLiteral: makeGArrayVar(names: exportedArrayNames)))
-		results.append (DeclSyntax(stringLiteral: makeGetProxyAccessor(names: exportedArrayNames)))
-		results.append (DeclSyntax(stringLiteral: makeSetProxyAccessor(names: exportedArrayNames)))
+		
+		results.append (DeclSyntax(stringLiteral: makeGetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))
+		results.append (DeclSyntax(stringLiteral: makeSetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))
 		
 		return results
 	}
 	
-	// static func createEmptyGArray() -> String {
-	// 	"""
-	// 	private func empty<T: VariantRepresentable>(_ type: T.Type = T.self) -> GArray {
-	// 		GArray(
-	// 			base: GArray(),
-	// 			type: Int32(T.godotType.rawValue),
-	// 			className: T.godotType == .object ? StringName("\\(T.self)") : StringName(),
-	// 			script: Variant()
-	// 		)
-	// 	}
-	// 	"""
-	// }
-	
-	// static func createMakeGArray() -> String {
-	// 	"""
-	// 	private func make<T: VariantRepresentable>(_ array: [T]) -> GArray {
-	// 		array.reduce(into: empty(T.self)) {
-	// 			$0.append(value: Variant($1))
-	// 		}
-	// 	}
-	// 	"""
-	// }
-	
-	private static func makeGArrayVar(names: ExportedArrayNames) -> String {
+	private static func makeGetProxyAccessor(varName: String, elementTypeName: String) -> String {
 		"""
-		private lazy var \(names.gArray): GArray = \(names.variable).reduce(into: .empty(\(names.element).self)) { $0.append(value: Variant($1)) } { {
-			didSet {
-				\(names.variable) = \(names.gArray).compactMap(\(names.element).makeOrUnwrap)
-			}
+		func _mproxy_get_\(varName)(args: [Variant]) -> Variant? {
+			return Variant(\(varName).array)
 		}
 		"""
 	}
 	
-	private static func makeGetProxyAccessor(names: ExportedArrayNames) -> String {
+	private static func makeSetProxyAccessor(varName: String, elementTypeName: String) -> String {
 		"""
-		func _mproxy_get_\(names.variable)(args: [Variant]) -> Variant? {
-			\(names.variable) = \(names.gArray).compactMap(\(names.element).makeOrUnwrap)
-			return Variant(\(names.gArray))
-		}
-		"""
-	}
-	
-	private static func makeSetProxyAccessor(names: ExportedArrayNames) -> String {
-		"""
-		func _mproxy_set_\(names.variable)(args: [Variant]) -> Variant? {
+		func _mproxy_set_\(varName)(args: [Variant]) -> Variant? {
 			guard let arg = args.first,
 				  let gArray = GArray(arg),
-				  gArray.allSatisfy({ \(names.element)($0) != nil }) else {
-				\(names.variable) = []
-				return Variant(GArray.empty(\(names.element).self))
+				  gArray.isTyped(),
+				  gArray.isSameTyped(array: GArray(\(elementTypeName).self)) else {
+				return nil
 			}
-			\(names.gArray) = gArray
+			\(varName).array = gArray
 			return nil
 		}
 		"""
 	}
 }
-
-//extension GArray {
-//	/// Creates an empty typed GArray whose elements conform to `VariantRepresentable`
-//	static func empty<T: VariantRepresentable>(_ type: T.Type = T.self) -> GArray {
-//		GArray(
-//			base: GArray(),
-//			type: Int32(T.godotType.rawValue),
-//			className: T.godotType == .object ? StringName("\(T.self)") : StringName(),
-//			script: Variant()
-//		)
-//	}
-//
-//	/// Creates a GArray whose elements are from the passed array, and whose elements conform to `VariantRepresentable`
-//	static func make<T: VariantRepresentable>(_ array: [T]) -> GArray {
-//		array.reduce(into: empty(T.self)) {
-//			$0.append(value: Variant($1))
-//		}
-//	}
-//}
-//
-//extension Array where Element: VariantRepresentable {
-//	var gArray: GArray { self.reduce(into: .empty(Element.self)) { $0.append(value: Variant($1)) } }
-//}

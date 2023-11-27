@@ -31,6 +31,7 @@ enum GodotMacroError: Error, DiagnosticMessage {
     case requiresClass
     case requiresVar
     case requiresFunction
+	case requiresVariantCollection
     case noVariablesFound
     case noTypeFound(VariableDeclSyntax)
     case unsupportedType(VariableDeclSyntax)
@@ -59,7 +60,9 @@ enum GodotMacroError: Error, DiagnosticMessage {
             "@Export expected an identifier, instead got \(e)"
         case .unknownError(let e):
             "Unknown nested error processing this directive: \(e)"
-        }
+		case .requiresVariantCollection:
+			"@Export can not be applied to Array, use VariantCollection instead"
+		}
     }
     
     var diagnosticID: MessageID {

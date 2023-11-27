@@ -177,7 +177,7 @@ class GodotMacroProcessor {
         }
     }
     
-    func processArrayVariable(_ varDecl: VariableDeclSyntax) throws {
+    func processVariantCollectionVariable(_ varDecl: VariableDeclSyntax) throws {
         guard hasExportAttribute(varDecl.attributes) else {
             return
         }
@@ -189,10 +189,11 @@ class GodotMacroProcessor {
             throw GodotMacroError.noTypeFound(varDecl)
         }
 		
-		guard let elementTypeName = type.arrayElementTypeName else {
+		guard let elementTypeName = type.variantCollectionElementTypeName else {
 			return
 		}
 		
+		// TODO: remove optionality?
         if let optSyntax = type.as (OptionalTypeSyntax.self) {
             type = optSyntax.wrappedType
         }
@@ -263,7 +264,7 @@ class GodotMacroProcessor {
     """
     let \(pinfo) = PropInfo (
         propertyType: \(godotTypeToProp(typeName: "Array")),
-        propertyName: "\(varName)",
+        propertyName: "\(varName.camelCaseToSnakeCase())",
         className: StringName("\(godotArrayTypeName)"),
         hint: .\(f?.description ?? "none"),
         hintStr: \(s?.description ?? "\"Array of \(elementTypeName)\""),
@@ -292,8 +293,10 @@ class GodotMacroProcessor {
             if let funcDecl = FunctionDeclSyntax(decl) {
                 try processFunction (funcDecl)
 			} else if let varDecl = VariableDeclSyntax(decl) {
-				if varDecl.isArray {
-					try processArrayVariable(varDecl)
+				if varDecl.isVariantCollection {
+					try processVariantCollectionVariable(varDecl)
+				} else if varDecl.isArray {
+					throw GodotMacroError.requiresVariantCollection
 				} else {
 					try processVariable (varDecl)
 				}
@@ -460,5 +463,9 @@ struct godotMacrosPlugin: CompilerPlugin {
 private extension VariableDeclSyntax {
 	var isArray: Bool {
 		bindings.last?.typeAnnotation?.type.isArray == true
+	}
+	
+	var isVariantCollection: Bool {
+		bindings.last?.typeAnnotation?.type.isVariantCollection == true
 	}
 }

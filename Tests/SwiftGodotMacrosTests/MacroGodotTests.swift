@@ -281,66 +281,44 @@ final class MacroGodotTests: XCTestCase {
 		)
 	}
 	
-	func testExportArrayStringGodotMacro() {
+	func testExportArrayStringGodotMacroFails() {
 		assertMacroExpansion(
-"""
-@Godot
-class SomeNode: Node {
-	@Export
-	var greetings: [String]
-}
-""",
-			expandedSource:
-"""
+			"""
+			@Godot
+			class SomeNode: Node {
+				@Export
+				var greetings: [String]
+			}
+			""",
+		expandedSource:
+			"""
 
-class SomeNode: Node {
-	var greetings: [String]
-
-	private lazy var _greetings_GArray: GArray = .make(greetings) {
-		didSet {
-			greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-		}
+			class SomeNode: Node {
+				var greetings: [String]
+			}
+			""",
+			diagnostics: [
+				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 3, column: 2),
+				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 1, column: 1)
+			],
+			macros: testMacros
+		)
 	}
+	
+	func testExportArrayStringMacroFails() {
+		assertMacroExpansion(
+			"""
+			@Export
+			var greetings: [String]
+			""",
+		expandedSource:
+			"""
 
-	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-		return Variant(_greetings_GArray)
-	}
-
-	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
-		guard let arg = args.first,
-			  let gArray = GArray(arg),
-			  gArray.allSatisfy({
-		        String($0) != nil
-		    }) else {
-			greetings = []
-			return Variant(GArray.empty(String.self))
-		}
-		_greetings_GArray = gArray
-		return nil
-	}
-
-    override open class var classInitializer: Void {
-        let _ = super.classInitializer
-        return _initializeClass
-    }
-
-    private static var _initializeClass: Void = {
-        let className = StringName("SomeNode")
-        let classInfo = ClassInfo<SomeNode> (name: className)
-        let _pgreetings = PropInfo (
-            propertyType: .array,
-            propertyName: "greetings",
-            className: StringName("Array[String]"),
-            hint: .none,
-            hintStr: "Array of String",
-            usage: .default)
-    	classInfo.registerMethod (name: "get_greetings", flags: .default, returnValue: _pgreetings, arguments: [], function: SomeNode._mproxy_get_greetings)
-    	classInfo.registerMethod (name: "set_greetings", flags: .default, returnValue: nil, arguments: [_pgreetings], function: SomeNode._mproxy_set_greetings)
-    	classInfo.registerProperty (_pgreetings, getter: "get_greetings", setter: "set_greetings")
-    } ()
-}
-""",
+			var greetings: [String]
+			""",
+			diagnostics: [
+				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 1, column: 1)
+			],
 			macros: testMacros
 		)
 	}
@@ -351,36 +329,29 @@ class SomeNode: Node {
 @Godot
 class SomeNode: Node {
 	@Export
-	var greetings: Array<String> = []
+	var greetings: VariantCollection<String> = []
 }
 """,
 			expandedSource:
 """
 
-class SomeNode: Node {
-	var greetings: Array<String> = []
 
-	private lazy var _greetings_GArray: GArray = .make(greetings) {
-		didSet {
-			greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-		}
-	}
+class SomeNode: Node {
+	var greetings: VariantCollection<String> = []
 
 	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
-		greetings = _greetings_GArray.compactMap(String.makeOrUnwrap)
-		return Variant(_greetings_GArray)
+		return Variant(greetings.array)
 	}
 
 	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
 		guard let arg = args.first,
 			  let gArray = GArray(arg),
-			  gArray.allSatisfy({
-		        String($0) != nil
-		    }) else {
-			greetings = []
-			return Variant(GArray.empty(String.self))
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: GArray(String.self)),
+			  let variantCollection = VariantCollection<String>(Variant(gArray)) else {
+			return nil
 		}
-		_greetings_GArray = gArray
+		greetings = variantCollection
 		return nil
 	}
 

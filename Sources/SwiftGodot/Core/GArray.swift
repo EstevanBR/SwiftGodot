@@ -43,18 +43,21 @@ extension GArray: Collection {
 }
 
 extension GArray {
-    public static func empty<T: VariantRepresentable>(_ type: T.Type = T.self) -> GArray {
-		GArray(
+    public convenience init<T: VariantStorable>(_ type: T.Type = T.self) {
+       self.init(
 			base: GArray(),
-			type: Int32(T.godotType.rawValue),
-			className: T.godotType == .object ? StringName("\(T.self)") : StringName(),
+			type: Int32(T.Representable.godotType.rawValue),
+			className: T.Representable.godotType == .object ? StringName("\(T.self)") : StringName(),
 			script: Variant()
 		)
-	}
+    }
 
-	public static func make<T: VariantRepresentable>(_ array: [T]) -> GArray {
-		array.reduce(into: empty(T.self)) {
-			$0.append(value: Variant($1))
-		}
+    public convenience init<T: VariantStorable>(_ array: [T]) {
+        self.init(T.self)
+        array.forEach { append(value: Variant($0)) }
+    }
+	
+	public func asArray<T: VariantStorable>(_ type: T.Type = T.self) -> [T] {
+		compactMap(T.makeOrUnwrap)
 	}
 }

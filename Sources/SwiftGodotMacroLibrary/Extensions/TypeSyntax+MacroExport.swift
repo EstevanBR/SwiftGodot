@@ -12,14 +12,25 @@ extension TypeSyntax {
 	var isArray: Bool {
 		isSquareArray || isGenericArray
 	}
-	/// Returns `"Element"` if type is `[Element]` or `Array<Element>`
-	var arrayElementTypeName: String? {
-		if isGenericArray {
-			return getGenericArrayElementTypeName()
-		} else if isSquareArray {
-			return getArrayElementTypeName()
+	
+	var isVariantCollection: Bool {
+		self.as(IdentifierTypeSyntax.self)?.name.text == "VariantCollection"
+	}
+	
+	var variantCollectionElementTypeName: String? {
+		guard let identifier = self.as(IdentifierTypeSyntax.self),
+			  identifier.name.text == "VariantCollection",
+			  let elementTypeName = identifier.genericArgumentClause?
+			.arguments
+			.first?
+			.argument
+			.as(IdentifierTypeSyntax.self)?
+			.name
+			.text else {
+			return nil
 		}
-		return nil
+		
+		return elementTypeName
 	}
 }
 
@@ -34,10 +45,13 @@ private extension TypeSyntax {
 		self.as(IdentifierTypeSyntax.self)?.name.text == "Array"
 	}
 	
-	func getArrayElementTypeName() -> String? {
-		guard let arrayDecl = self.as(ArrayTypeSyntax.self),
-			  let elementTypeName = arrayDecl
-			.element
+	var variantCollectionGenericElementTypeName: String? {
+		guard let identifier = self.as(IdentifierTypeSyntax.self),
+			  identifier.name.text == "VariantCollection",
+			  let elementTypeName = identifier.genericArgumentClause?
+			.arguments
+			.first?
+			.argument
 			.as(IdentifierTypeSyntax.self)?
 			.name
 			.text else {
@@ -47,9 +61,9 @@ private extension TypeSyntax {
 		return elementTypeName
 	}
 	
-	func getGenericArrayElementTypeName() -> String? {
+	var variantCollectionInitializerElementTypeName: String? {
 		guard let identifier = self.as(IdentifierTypeSyntax.self),
-			  identifier.name.text == "Array",
+			  identifier.name.text == "VariantCollection",
 			  let elementTypeName = identifier.genericArgumentClause?
 			.arguments
 			.first?
