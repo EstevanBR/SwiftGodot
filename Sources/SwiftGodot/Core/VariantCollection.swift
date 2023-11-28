@@ -8,8 +8,9 @@
 @_implementationOnly import GDExtension
 
 /// This represents a typed array of one of the built-in types from Godot
-public class VariantCollection<Element: VariantStorable>: Collection, ExpressibleByArrayLiteral {
+public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArrayLiteral {
     public typealias ArrayLiteralElement = Element
+    public typealias Element = T
     
     public var array: GArray
 
@@ -18,11 +19,12 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
 		elements.forEach { array.append(value: Variant($0.toVariantRepresentable())) }
 		GD.printDebug(
   			"""
-			did init with:
+			🍑did init with:
 				[(\(Element.self)) T]
 					elements: \(elements)
 					array.count: \(array.count)
 					array.compactMap { $0 }: \(array.compactMap { $0 } ))
+					array.compactMap { (\(T.self)) T.makeOrUnwrap($0) }: \(array.compactMap { T.makeOrUnwrap($0) })
 					array.compactMap { (\(Element.self)) Element.makeOrUnwrap($0) }: \(array.compactMap { Element.makeOrUnwrap($0) })
 					array.compactMap { Node.makeOrUnwrap($0) }: \(array.compactMap { Node.makeOrUnwrap($0) })
 					array.compactMap { Object.makeOrUnwrap($0) }: \(array.compactMap { Object.makeOrUnwrap($0) })
@@ -62,17 +64,17 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     public subscript (index: Index) -> Element {
         get {
             guard let v = array.indices.contains(index) ? array[index] : nil else {
-                GD.printDebug("array.indices.contains(index): \(array.indices.contains(index))")
+                GD.printDebug("🍑array.indices.contains(index): \(array.indices.contains(index))")
                 fatalError("Sad!")
             }
 			if let unwrapped = Element.makeOrUnwrap(v) {
-                GD.printDebug("(\(Element.self)) Element.makeOrUnwrap(v)")
+                GD.printDebug("🍑(\(Element.self)) Element.makeOrUnwrap(v)")
 				return unwrapped
 			} else if let initialized = Element(v) {
-                GD.printDebug("initialized \(initialized) with (\(Element.self)) Element(v)")
+                GD.printDebug("🍑initialized \(initialized) with (\(Element.self)) Element(v)")
 				return initialized
 			} else {
-				GD.printDebug("I refuse to force unwrap")
+				GD.printDebug("🍑I refuse to force unwrap")
 				fatalError("Sad!")
 			}
         }
