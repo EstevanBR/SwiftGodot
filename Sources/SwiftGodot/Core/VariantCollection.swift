@@ -11,11 +11,10 @@
 public class VariantCollection<Element: VariantStorable>: Collection, ExpressibleByArrayLiteral {
     public typealias ArrayLiteralElement = Element
     
-    public let array: GArray
+    public var array: GArray
 
     public required init(arrayLiteral elements: ArrayLiteralElement...) {
-        array = .init(elements.map { $0 })
-		GD.printDebug("did init with: \(elements) array now has: \(array.asArray(Element.self))")
+		array = .init(elements.map { $0.toVariantRepresentable() })
     }
     
     init (content: Int64) {
@@ -50,7 +49,16 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     public subscript (index: Index) -> Element {
         get {
             let v = array [index]
-            return Element(v)!
+			if let unwrapped = Element.makeOrUnwrap(v) {
+                GD.printDebug("(\(Element.self)) Element.makeOrUnwrap(v)")
+				return unwrapped
+			} else if let initialized = Element(v) {
+                GD.printDebug("(\(Element.self)) Element(v)")
+				return initialized
+			} else {
+				GD.printDebug("I refuse to force unwrap")
+				fatalError("Sad!")
+			}
         }
         set {
             array [index] = Variant(newValue)
@@ -110,9 +118,9 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     
     /// Appends an element at the end of the array (alias of ``pushBack(value:)``).
     public final func append (value: Element) {
-		GD.printDebug("will append: \(value) to: \(array.asArray(Element.self))")
-        array.append (value: Variant(value))
-		GD.printDebug("did append: \(value) now: \(array.asArray(Element.self))")
+//		GD.printDebug("will append: array.count: \(array.count) \(Element.self): \(value) to: \(array.asArray(Element.self))")
+        array.append (value: Variant(value.toVariantRepresentable()))
+//		GD.printDebug("did append: array.count: \(array.count) \(Element.self): \(value) now: \(array.asArray(Element.self))")
     }
     
     /// Resizes the array to contain a different number of elements. If the array size is smaller, elements are cleared, if bigger, new elements are `null`. Returns ``GodotError/ok`` on success, or one of the other ``GodotError`` values if the operation failed.

@@ -43,21 +43,26 @@ extension GArray: Collection {
 }
 
 extension GArray {
-    public convenience init<T: VariantStorable>(_ type: T.Type = T.self) {
-       self.init(
+	public convenience init<T: VariantRepresentable>(_ type: T.Type = T.self) {
+		self.init(
 			base: GArray(),
-			type: Int32(T.Representable.godotType.rawValue),
-			className: T.Representable.godotType == .object ? StringName("\(T.self)") : StringName(),
+			type: Int32(T.godotType.rawValue),
+			className: T.godotType == .object ? StringName("\(T.self)") : StringName(),
 			script: Variant()
 		)
-    }
-
-    public convenience init<T: VariantStorable>(_ array: [T]) {
-        self.init(T.self)
-        array.forEach { append(value: Variant($0)) }
-    }
+	}
 	
-	public func asArray<T: VariantStorable>(_ type: T.Type = T.self) -> [T] {
-		compactMap(T.makeOrUnwrap)
+	public convenience init<T: VariantRepresentable>(_ array: [T]) {
+		self.init(T.self)
+		GD.printDebug("array: \(array)")
+		array.forEach { append(value: Variant($0)) }
+		GD.printDebug("count: \(count)")
+	}
+	
+	public func asArray<T: VariantRepresentable>(_ type: T.Type = T.self) -> [T] {
+		GD.printDebug("count: \(count)")
+		let result: [T] = compactMap { T.makeOrUnwrap($0) }
+		GD.printDebug("result.count: \(result.count) [\(result)]")
+		return result
 	}
 }
