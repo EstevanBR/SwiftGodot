@@ -14,7 +14,20 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     public var array: GArray
 
     public required init(arrayLiteral elements: ArrayLiteralElement...) {
-		array = .init(elements.map { $0.toVariantRepresentable() })
+		array = .init(Element.self)
+		elements.forEach { array.append(value: Variant($0.toVariantRepresentable())) }
+		GD.printDebug(
+  			"""
+			did init with:
+				[(\(Element.self)) T]
+					elements: \(elements)
+					array.count: \(array.count)
+					array.compactMap { $0 }: \(array.compactMap { $0 } ))
+					array.compactMap { (\(Element.self)) Element.makeOrUnwrap($0) }: \(array.compactMap { Element.makeOrUnwrap($0) })
+					array.compactMap { Node.makeOrUnwrap($0) }: \(array.compactMap { Node.makeOrUnwrap($0) })
+					array.compactMap { Object.makeOrUnwrap($0) }: \(array.compactMap { Object.makeOrUnwrap($0) })
+			"""
+		)
     }
     
     init (content: Int64) {
@@ -48,12 +61,15 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     /// Accesses the element at the specified position.
     public subscript (index: Index) -> Element {
         get {
-            let v = array [index]
+            guard let v = array.indices.contains(index) ? array[index] : nil else {
+                GD.printDebug("array.indices.contains(index): \(array.indices.contains(index))")
+                fatalError("Sad!")
+            }
 			if let unwrapped = Element.makeOrUnwrap(v) {
                 GD.printDebug("(\(Element.self)) Element.makeOrUnwrap(v)")
 				return unwrapped
 			} else if let initialized = Element(v) {
-                GD.printDebug("(\(Element.self)) Element(v)")
+                GD.printDebug("initialized \(initialized) with (\(Element.self)) Element(v)")
 				return initialized
 			} else {
 				GD.printDebug("I refuse to force unwrap")
