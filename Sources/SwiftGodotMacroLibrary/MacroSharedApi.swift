@@ -32,6 +32,7 @@ enum GodotMacroError: Error, DiagnosticMessage {
     case requiresVar
     case requiresFunction
 	case requiresGArrayCollection
+	case requiresNonOptionalGArrayCollection
     case noVariablesFound
     case noTypeFound(VariableDeclSyntax)
     case unsupportedType(VariableDeclSyntax)
@@ -61,7 +62,9 @@ enum GodotMacroError: Error, DiagnosticMessage {
         case .unknownError(let e):
             "Unknown nested error processing this directive: \(e)"
 		case .requiresGArrayCollection:
-			"@Export can not be applied to Array, use VariantCollection, ObjectCollection, instead."
+			"@Export attribute can not be applied to Array types, use a VariantCollection, or an ObjectCollection instead"
+		case .requiresNonOptionalGArrayCollection:
+			"@Export optional Collections are not supported"
 		}
     }
     

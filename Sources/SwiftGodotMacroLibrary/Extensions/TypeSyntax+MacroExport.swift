@@ -26,6 +26,12 @@ extension VariableDeclSyntax {
 	}
 }
 
+extension TypeSyntax {
+	var isGArrayCollection: Bool {
+		isVariantCollection || isObjectCollection
+	}
+}
+
 private extension TypeSyntax {
 	var isArray: Bool {
 		isSquareArray || isGenericArray

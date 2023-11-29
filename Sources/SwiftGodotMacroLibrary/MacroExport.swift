@@ -94,6 +94,10 @@ public struct GodotExport: PeerMacro {
 		guard type.is(IdentifierTypeSyntax.self) else {
 			throw GodotMacroError.unsupportedType(varDecl)
 		}
+		
+		guard (type.isGArrayCollection && isOptional) == false else {
+			throw GodotMacroError.requiresNonOptionalGArrayCollection
+		}
 
         var results: [DeclSyntax] = []
 
