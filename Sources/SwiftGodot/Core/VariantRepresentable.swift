@@ -29,15 +29,11 @@ extension VariantRepresentable {
 
 /// Default Initializers
 extension VariantRepresentable {
-	public init?(_ variant: Variant) {
+    public init?(_ variant: Variant) {
         guard Self.godotType == variant.gtype else { return nil }
         
         guard variant.gtype != .object else {
-            GD.printDebug(
-				"""
-				Attempted to initialize a new `\(Self.self)` with \(variant.description) but it is not possible to initialize a GodotObject in a Swift initializer. Instead, use `\(Self.self).makeOrUnwrap(variant)`.
-				"""
-			)
+            GD.print("Attempted to initialize a new `\(Self.self)` with \(variant.description) but it is not possible to initialize a GodotObject in a Swift initializer. Instead, use `\(Self.self).makeOrUnwrap(variant)`.")
             return nil
         }
         
@@ -47,20 +43,6 @@ extension VariantRepresentable {
             variant.toType(Self.godotType, dest: ptr)
         }
     }
-	
-	public init?(_ variant: Variant) where Self: GodotObject {
-		guard Self.godotType == variant.gtype else { return nil }
-		
-		guard let godotObject = variant.asObject(Self.self) else {
-			fatalError("Naughty boy")
-		}
-		
-		self = godotObject
-		
-		withUnsafeMutablePointer(to: &self) { ptr in
-			variant.toType(Self.godotType, dest: ptr)
-		}
-	}
     
     public init?(_ variant: Variant) where Self: ContentTypeStoring {
         guard Self.godotType == variant.gtype else { return nil }
@@ -225,20 +207,3 @@ extension Object: VariantRepresentable {
 extension Nil: VariantRepresentable {
     public static var godotType: Variant.GType { .nil }
 }
-
-//extension String: VariantRepresentable {
-//	public static var godotType: Variant.GType {
-//		.string
-//	}
-//}
-//
-//extension Int: VariantRepresentable {
-//	public static var godotType: Variant.GType {
-//		.int
-//	}
-//}
-//extension Float: VariantRepresentable {
-//	public static var godotType: Variant.GType {
-//		.float
-//	}
-//}
