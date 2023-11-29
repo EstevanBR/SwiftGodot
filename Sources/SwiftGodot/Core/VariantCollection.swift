@@ -8,14 +8,16 @@
 @_implementationOnly import GDExtension
 
 /// This represents a typed array of one of the built-in types from Godot
-public class VariantCollection<Element: VariantStorable>: Collection, ExpressibleByArrayLiteral {
+public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArrayLiteral, GArrayCollection {
     public typealias ArrayLiteralElement = Element
+    public typealias Element = T
     
-    public let array: GArray
+    public var array: GArray
 
     public required init(arrayLiteral elements: ArrayLiteralElement...) {
-        array = .init(elements.map { $0 })
-		GD.printDebug("did init with: \(elements) array now has: \(array.asArray(Element.self))")
+		array = elements.reduce(into: .init(Element.self)) {
+			$0.append(value: Variant($1))
+		}
     }
     
     init (content: Int64) {
@@ -110,9 +112,7 @@ public class VariantCollection<Element: VariantStorable>: Collection, Expressibl
     
     /// Appends an element at the end of the array (alias of ``pushBack(value:)``).
     public final func append (value: Element) {
-		GD.printDebug("will append: \(value) to: \(array.asArray(Element.self))")
         array.append (value: Variant(value))
-		GD.printDebug("did append: \(value) now: \(array.asArray(Element.self))")
     }
     
     /// Resizes the array to contain a different number of elements. If the array size is smaller, elements are cleared, if bigger, new elements are `null`. Returns ``GodotError/ok`` on success, or one of the other ``GodotError`` values if the operation failed.

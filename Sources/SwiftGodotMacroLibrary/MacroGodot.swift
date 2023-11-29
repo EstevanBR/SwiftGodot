@@ -104,6 +104,9 @@ class GodotMacroProcessor {
         if let optSyntax = type.as (OptionalTypeSyntax.self) {
             type = optSyntax.wrappedType
         }
+        guard varDecl.isArray == false else {
+            throw GodotMacroError.requiresGArrayCollection
+        }
         guard let typeName = type.as (IdentifierTypeSyntax.self)?.name.text else {
             throw GodotMacroError.unsupportedType(varDecl)
         }
@@ -177,27 +180,26 @@ class GodotMacroProcessor {
         }
     }
     
-    func processVariantCollectionVariable(_ varDecl: VariableDeclSyntax) throws {
+    func processGArrayCollectionVariable(_ varDecl: VariableDeclSyntax) throws {
         guard hasExportAttribute(varDecl.attributes) else {
             return
         }
         guard let last = varDecl.bindings.last else {
             throw GodotMacroError.noVariablesFound
         }
-		
+        
         guard var type = last.typeAnnotation?.type else {
             throw GodotMacroError.noTypeFound(varDecl)
         }
-		
-		guard let elementTypeName = type.variantCollectionElementTypeName else {
-			return
-		}
-		
-		// TODO: remove optionality?
-        if let optSyntax = type.as (OptionalTypeSyntax.self) {
-            type = optSyntax.wrappedType
+        
+        guard !type.is (OptionalTypeSyntax.self) else {
+            throw GodotMacroError.requiresNonOptionalGArrayCollection
         }
-		
+        
+        guard let elementTypeName = varDecl.gArrayCollectionElementTypeName else {
+            return
+        }
+        
         let exportAttr = varDecl.attributes.first?.as(AttributeSyntax.self)
         let lel = exportAttr?.arguments?.as(LabeledExprListSyntax.self)
         let f = lel?.first?.expression.as(MemberAccessExprSyntax.self)?.declName
@@ -214,7 +216,7 @@ class GodotMacroProcessor {
             let proxyGetterName = "_mproxy_get_\(varName)"
             let setterName = "set_\(varName.camelCaseToSnakeCase())"
             let getterName = "get_\(varName.camelCaseToSnakeCase())"
-
+            
             if let accessors = last.accessorBlock {
                 if accessors.as (CodeBlockSyntax.self) != nil {
                     throw MacroError.propertyGetSet
@@ -252,12 +254,12 @@ class GodotMacroProcessor {
                 }
             }
             let pinfo = "_p\(varName)"
-			let godotArrayElementTypeName: String
-			if let gType = godotVariants[elementTypeName], let fromGType = godotArrayElementType(gType: gType) {
-				godotArrayElementTypeName = fromGType
-			} else {
-				godotArrayElementTypeName = elementTypeName
-			}
+            let godotArrayElementTypeName: String
+            if let gType = godotVariants[elementTypeName], let fromGType = godotArrayElementType(gType: gType) {
+                godotArrayElementTypeName = fromGType
+            } else {
+                godotArrayElementTypeName = elementTypeName
+            }
             
             let godotArrayTypeName = "Array[\(godotArrayElementTypeName)]"
             ctor.append (
@@ -290,15 +292,13 @@ class GodotMacroProcessor {
         for member in classDecl.memberBlock.members.enumerated() {
             let decl = member.element.decl
             // MacroExpansionDeclSyntax
-            if let funcDecl = FunctionDeclSyntax(decl) {
-                try processFunction (funcDecl)
+			if let funcDecl = FunctionDeclSyntax(decl) {
+				try processFunction (funcDecl)
 			} else if let varDecl = VariableDeclSyntax(decl) {
-				if varDecl.isVariantCollection {
-					try processVariantCollectionVariable(varDecl)
-				} else if varDecl.isArray {
-					throw GodotMacroError.requiresVariantCollection
+				if varDecl.isGArrayCollection {
+					try processGArrayCollectionVariable(varDecl)
 				} else {
-					try processVariable (varDecl)
+					try processVariable(varDecl)
 				}
             } else if let macroDecl = MacroExpansionDeclSyntax(decl) {
                 try classInitSignals(macroDecl)
@@ -458,14 +458,4 @@ struct godotMacrosPlugin: CompilerPlugin {
         Texture2DLiteralMacro.self,
         SignalMacro.self
     ]
-}
-
-private extension VariableDeclSyntax {
-	var isArray: Bool {
-		bindings.last?.typeAnnotation?.type.isArray == true
-	}
-	
-	var isVariantCollection: Bool {
-		bindings.last?.typeAnnotation?.type.isVariantCollection == true
-	}
 }

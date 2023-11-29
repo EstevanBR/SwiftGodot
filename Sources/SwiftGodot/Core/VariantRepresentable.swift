@@ -207,19 +207,3 @@ extension Object: VariantRepresentable {
 extension Nil: VariantRepresentable {
     public static var godotType: Variant.GType { .nil }
 }
-
-extension String: VariantRepresentable {
-	public static var godotType: Variant.GType {
-		.string
-	}
-}
-extension Int: VariantRepresentable {
-	public static var godotType: Variant.GType {
-		.int
-	}
-}
-extension Float: VariantRepresentable {
-	public static var godotType: Variant.GType {
-		.float
-	}
-}
