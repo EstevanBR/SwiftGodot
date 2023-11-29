@@ -51,12 +51,15 @@ public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArr
     /// Accesses the element at the specified position.
     public subscript (index: Index) -> Element {
         get {
-            let v = array [index]
+            guard let v = array.indices.contains(index) ? array[index] : nil else {
+                GD.printDebug("array.indices.contains(index): \(array.indices.contains(index))")
+                fatalError("Sad!")
+            }
 			if let unwrapped = Element.makeOrUnwrap(v) {
                 GD.printDebug("(\(Element.self)) Element.makeOrUnwrap(v)")
 				return unwrapped
 			} else if let initialized = Element(v) {
-                GD.printDebug("(\(Element.self)) Element(v)")
+                GD.printDebug("initialized \(initialized) with (\(Element.self)) Element(v)")
 				return initialized
 			} else {
 				GD.printDebug("I refuse to force unwrap")
