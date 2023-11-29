@@ -52,17 +52,17 @@ public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArr
     public subscript (index: Index) -> Element {
         get {
             guard let v = array.indices.contains(index) ? array[index] : nil else {
-                GD.printDebug("array.indices.contains(index): \(array.indices.contains(index))")
+                GD.printDebug("🍑array.indices.contains(index): \(array.indices.contains(index))")
                 fatalError("Sad!")
             }
 			if let unwrapped = Element.makeOrUnwrap(v) {
-                GD.printDebug("(\(Element.self)) Element.makeOrUnwrap(v)")
+                GD.printDebug("🍑(\(Element.self)) Element.makeOrUnwrap(v)")
 				return unwrapped
 			} else if let initialized = Element(v) {
-                GD.printDebug("initialized \(initialized) with (\(Element.self)) Element(v)")
+                GD.printDebug("🍑initialized \(initialized) with (\(Element.self)) Element(v)")
 				return initialized
 			} else {
-				GD.printDebug("I refuse to force unwrap")
+				GD.printDebug("🍑I refuse to force unwrap")
 				fatalError("Sad!")
 			}
         }
