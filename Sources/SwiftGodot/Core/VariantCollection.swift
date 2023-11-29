@@ -52,7 +52,16 @@ public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArr
     public subscript (index: Index) -> Element {
         get {
             let v = array [index]
-            return Element(v)!
+			if let unwrapped = Element.makeOrUnwrap(v) {
+                GD.printDebug("(\(Element.self)) Element.makeOrUnwrap(v)")
+				return unwrapped
+			} else if let initialized = Element(v) {
+                GD.printDebug("(\(Element.self)) Element(v)")
+				return initialized
+			} else {
+				GD.printDebug("I refuse to force unwrap")
+				fatalError("Sad!")
+			}
         }
         set {
             array [index] = Variant(newValue)
