@@ -189,7 +189,9 @@ class GodotMacroProcessor {
             throw GodotMacroError.noTypeFound(varDecl)
         }
 		
-		guard let elementTypeName = type.variantCollectionElementTypeName else {
+		var elementTypeName: String? = varDecl.variantCollectionElementTypeName
+		elementTypeName = elementTypeName == nil ? varDecl.objectCollectionElementTypeName : elementTypeName
+		guard let elementTypeName else {
 			return
 		}
 		
@@ -293,12 +295,8 @@ class GodotMacroProcessor {
             if let funcDecl = FunctionDeclSyntax(decl) {
                 try processFunction (funcDecl)
 			} else if let varDecl = VariableDeclSyntax(decl) {
-				if varDecl.isVariantCollection {
+				if varDecl.isVariantCollection || varDecl.isObjectCollection {
 					try processVariantCollectionVariable(varDecl)
-				} else if varDecl.isArray {
-					throw GodotMacroError.requiresVariantCollection
-				} else {
-					try processVariable (varDecl)
 				}
             } else if let macroDecl = MacroExpansionDeclSyntax(decl) {
                 try classInitSignals(macroDecl)
@@ -458,14 +456,4 @@ struct godotMacrosPlugin: CompilerPlugin {
         Texture2DLiteralMacro.self,
         SignalMacro.self
     ]
-}
-
-private extension VariableDeclSyntax {
-	var isArray: Bool {
-		bindings.last?.typeAnnotation?.type.isArray == true
-	}
-	
-	var isVariantCollection: Bool {
-		bindings.last?.typeAnnotation?.type.isVariantCollection == true
-	}
 }

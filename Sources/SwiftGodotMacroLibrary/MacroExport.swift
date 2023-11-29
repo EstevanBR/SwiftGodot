@@ -85,8 +85,8 @@ public struct GodotExport: PeerMacro {
             type = optSyntax.wrappedType
         }
 		
-		guard type.isArray == false else {
-			let classError = Diagnostic(node: declaration.root, message: GodotMacroError.requiresVariantCollection)
+		guard varDecl.isArray == false else {
+			let classError = Diagnostic(node: declaration.root, message: GodotMacroError.requiresSwiftGodotCollection)
 			context.diagnose(classError)
 			return []
 		}
@@ -140,9 +140,23 @@ public struct GodotExport: PeerMacro {
                 }
             }
 			
-			if type.isVariantCollection, let elementTypeName = type.variantCollectionElementTypeName {
-				results.append(contentsOf: createVariantCollectionResults(varName: varName, elementTypeName: elementTypeName))
-			} else if let typeName = type.as(IdentifierTypeSyntax.self)?.name.text {
+			if let elementTypeName = varDecl.variantCollectionElementTypeName {
+				results.append(
+					contentsOf: createGArrayCollectionResults(
+						varName: varName,
+						elementTypeName: elementTypeName
+					)
+				)
+			} else
+			if let elementTypeName = varDecl.objectCollectionElementTypeName {
+				results.append(
+					contentsOf: createGArrayCollectionResults(
+						varName: varName,
+						elementTypeName: elementTypeName
+					)
+				)
+			} else
+			if let typeName = type.as(IdentifierTypeSyntax.self)?.name.text {
 				results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, typeName: typeName, isOptional: isOptional)))
 				results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName, isOptional: isOptional)))
 			}
@@ -153,7 +167,7 @@ public struct GodotExport: PeerMacro {
 }
 
 private extension GodotExport {
-	static func createVariantCollectionResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
+	static func createGArrayCollectionResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
 		var results: [DeclSyntax] = []
 		
 		results.append (DeclSyntax(stringLiteral: makeGetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))

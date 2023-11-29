@@ -8,15 +8,16 @@
 @_implementationOnly import GDExtension
 
 /// This represents a typed array of one of the built-in types from Godot
-public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArrayLiteral {
+public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArrayLiteral, GArrayCollection {
     public typealias ArrayLiteralElement = Element
     public typealias Element = T
     
     public var array: GArray
 
     public required init(arrayLiteral elements: ArrayLiteralElement...) {
-		array = .init(Element.self)
-		elements.forEach { array.append(value: Variant($0.toVariantRepresentable())) }
+		array = elements.reduce(into: .init(Element.self)) {
+			$0.append(value: Variant($1))
+		}
     }
     
     init (content: Int64) {
