@@ -104,9 +104,9 @@ class GodotMacroProcessor {
         if let optSyntax = type.as (OptionalTypeSyntax.self) {
             type = optSyntax.wrappedType
         }
-		guard varDecl.isArray == false else {
-			throw GodotMacroError.requiresGArrayCollection
-		}
+        guard varDecl.isArray == false else {
+            throw GodotMacroError.requiresGArrayCollection
+        }
         guard let typeName = type.as (IdentifierTypeSyntax.self)?.name.text else {
             throw GodotMacroError.unsupportedType(varDecl)
         }
@@ -187,20 +187,19 @@ class GodotMacroProcessor {
         guard let last = varDecl.bindings.last else {
             throw GodotMacroError.noVariablesFound
         }
-		
+        
         guard var type = last.typeAnnotation?.type else {
             throw GodotMacroError.noTypeFound(varDecl)
         }
-		
-		guard let elementTypeName = varDecl.gArrayCollectionElementTypeName else {
-			return
-		}
-		
-		// TODO: remove optionality?
-        if let optSyntax = type.as (OptionalTypeSyntax.self) {
-            type = optSyntax.wrappedType
+        
+        guard !type.is (OptionalTypeSyntax.self) else {
+            throw GodotMacroError.requiresNonOptionalGArrayCollection
         }
-		
+        
+        guard let elementTypeName = varDecl.gArrayCollectionElementTypeName else {
+            return
+        }
+        
         let exportAttr = varDecl.attributes.first?.as(AttributeSyntax.self)
         let lel = exportAttr?.arguments?.as(LabeledExprListSyntax.self)
         let f = lel?.first?.expression.as(MemberAccessExprSyntax.self)?.declName
@@ -217,7 +216,7 @@ class GodotMacroProcessor {
             let proxyGetterName = "_mproxy_get_\(varName)"
             let setterName = "set_\(varName.camelCaseToSnakeCase())"
             let getterName = "get_\(varName.camelCaseToSnakeCase())"
-
+            
             if let accessors = last.accessorBlock {
                 if accessors.as (CodeBlockSyntax.self) != nil {
                     throw MacroError.propertyGetSet
@@ -255,12 +254,12 @@ class GodotMacroProcessor {
                 }
             }
             let pinfo = "_p\(varName)"
-			let godotArrayElementTypeName: String
-			if let gType = godotVariants[elementTypeName], let fromGType = godotArrayElementType(gType: gType) {
-				godotArrayElementTypeName = fromGType
-			} else {
-				godotArrayElementTypeName = elementTypeName
-			}
+            let godotArrayElementTypeName: String
+            if let gType = godotVariants[elementTypeName], let fromGType = godotArrayElementType(gType: gType) {
+                godotArrayElementTypeName = fromGType
+            } else {
+                godotArrayElementTypeName = elementTypeName
+            }
             
             let godotArrayTypeName = "Array[\(godotArrayElementTypeName)]"
             ctor.append (

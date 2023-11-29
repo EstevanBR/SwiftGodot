@@ -51,8 +51,8 @@ public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArr
     /// Accesses the element at the specified position.
     public subscript (index: Index) -> Element {
         get {
-			let v = array [index]
-			return Element(v)!
+            let v = array [index]
+            return Element(v)!
         }
         set {
             array [index] = Variant(newValue)
@@ -112,7 +112,7 @@ public class VariantCollection<T: VariantStorable>: Collection, ExpressibleByArr
     
     /// Appends an element at the end of the array (alias of ``pushBack(value:)``).
     public final func append (value: Element) {
-        array.append (value: Variant(value.toVariantRepresentable()))
+        array.append (value: Variant(value))
     }
     
     /// Resizes the array to contain a different number of elements. If the array size is smaller, elements are cleared, if bigger, new elements are `null`. Returns ``GodotError/ok`` on success, or one of the other ``GodotError`` values if the operation failed.
