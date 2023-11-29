@@ -286,8 +286,7 @@ final class MacroGodotTests: XCTestCase {
 			"""
 			@Godot
 			class SomeNode: Node {
-				@Export
-				var greetings: [String]
+				@Export var greetings: [String]
 			}
 			""",
 		expandedSource:
@@ -298,8 +297,8 @@ final class MacroGodotTests: XCTestCase {
 			}
 			""",
 			diagnostics: [
-				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 3, column: 2),
-				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 1, column: 1)
+				.init(message: "@Export can not be applied to Array, use VariantCollection, or ObjectCollection instead", line: 3, column: 2),
+				.init(message: "@Export can not be applied to Array, use VariantCollection, or ObjectCollection instead", line: 1, column: 1)
 			],
 			macros: testMacros
 		)
@@ -317,7 +316,7 @@ final class MacroGodotTests: XCTestCase {
 			var greetings: [String]
 			""",
 			diagnostics: [
-				.init(message: "@Export can not be applied to Array, use VariantCollection instead", line: 1, column: 1)
+				.init(message: "@Export can not be applied to Array, use VariantCollection, or ObjectCollection instead", line: 1, column: 1)
 			],
 			macros: testMacros
 		)
@@ -651,6 +650,88 @@ class ArrayTest: Node {
 }
 """
 		, macros: testMacros
+		)
+	}
+	
+	func testExportObjectCollection() throws {
+		assertMacroExpansion(
+"""
+@Export var greetings: ObjectCollection<Node3D> = []
+""",
+			expandedSource:
+"""
+var greetings: ObjectCollection<Node3D> = []
+
+func _mproxy_get_greetings(args: [Variant]) -> Variant? {
+	return Variant(greetings.array)
+}
+
+func _mproxy_set_greetings(args: [Variant]) -> Variant? {
+	guard let arg = args.first,
+		  let gArray = GArray(arg),
+		  gArray.isTyped(),
+		  gArray.isSameTyped(array: GArray(Node3D.self)) else {
+		return nil
+	}
+	greetings.array = gArray
+	return nil
+}
+""",
+			macros: testMacros
+		)
+	}
+	
+	func testGodotExportObjectCollection() throws {
+		assertMacroExpansion(
+"""
+@Godot
+class SomeNode: Node {
+	@Export var greetings: ObjectCollection<Node3D> = []
+}
+""",
+			expandedSource:
+"""
+
+class SomeNode: Node {
+	var greetings: ObjectCollection<Node3D> = []
+
+	func _mproxy_get_greetings(args: [Variant]) -> Variant? {
+		return Variant(greetings.array)
+	}
+
+	func _mproxy_set_greetings(args: [Variant]) -> Variant? {
+		guard let arg = args.first,
+			  let gArray = GArray(arg),
+			  gArray.isTyped(),
+			  gArray.isSameTyped(array: GArray(Node3D.self)) else {
+			return nil
+		}
+		greetings.array = gArray
+		return nil
+	}
+
+    override open class var classInitializer: Void {
+        let _ = super.classInitializer
+        return _initializeClass
+    }
+
+    private static var _initializeClass: Void = {
+        let className = StringName("SomeNode")
+        let classInfo = ClassInfo<SomeNode> (name: className)
+        let _pgreetings = PropInfo (
+            propertyType: .object,
+            propertyName: "greetings",
+            className: className,
+            hint: .none,
+            hintStr: "",
+            usage: .default)
+    	classInfo.registerMethod (name: "_mproxy_get_greetings", flags: .default, returnValue: _pgreetings, arguments: [], function: SomeNode._mproxy_get_greetings)
+    	classInfo.registerMethod (name: "_mproxy_set_greetings", flags: .default, returnValue: nil, arguments: [_pgreetings], function: SomeNode._mproxy_set_greetings)
+    	classInfo.registerProperty (_pgreetings, getter: "_mproxy_get_greetings", setter: "_mproxy_set_greetings")
+    } ()
+}
+""",
+			macros: testMacros
 		)
 	}
 }

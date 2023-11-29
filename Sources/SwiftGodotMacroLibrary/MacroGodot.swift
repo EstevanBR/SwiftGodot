@@ -104,6 +104,9 @@ class GodotMacroProcessor {
         if let optSyntax = type.as (OptionalTypeSyntax.self) {
             type = optSyntax.wrappedType
         }
+		guard varDecl.isArray == false else {
+			throw GodotMacroError.requiresSwiftGodotCollection
+		}
         guard let typeName = type.as (IdentifierTypeSyntax.self)?.name.text else {
             throw GodotMacroError.unsupportedType(varDecl)
         }
@@ -292,12 +295,12 @@ class GodotMacroProcessor {
         for member in classDecl.memberBlock.members.enumerated() {
             let decl = member.element.decl
             // MacroExpansionDeclSyntax
-            if let funcDecl = FunctionDeclSyntax(decl) {
-                try processFunction (funcDecl)
+			if let funcDecl = FunctionDeclSyntax(decl) {
+				try processFunction (funcDecl)
+			} else if let varDecl = VariableDeclSyntax(decl), varDecl.isVariantCollection {
+				try processVariantCollectionVariable(varDecl)
 			} else if let varDecl = VariableDeclSyntax(decl) {
-				if varDecl.isVariantCollection || varDecl.isObjectCollection {
-					try processVariantCollectionVariable(varDecl)
-				}
+				try processVariable(varDecl)
             } else if let macroDecl = MacroExpansionDeclSyntax(decl) {
                 try classInitSignals(macroDecl)
             }
