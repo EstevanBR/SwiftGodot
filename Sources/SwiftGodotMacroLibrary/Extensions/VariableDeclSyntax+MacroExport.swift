@@ -26,87 +26,6 @@ extension VariableDeclSyntax {
 	}
 }
 
-extension TypeSyntax {
-	var isGArrayCollection: Bool {
-		isVariantCollection || isObjectCollection
-	}
-}
-
-private extension TypeSyntax {
-	var isArray: Bool {
-		isSquareArray || isGenericArray
-	}
-	
-	var isSquareArray: Bool {
-		self.is(ArrayTypeSyntax.self)
-	}
-	
-	// Array<String> for example
-	var isGenericArray: Bool {
-		self.as(IdentifierTypeSyntax.self)?.name.text == "Array"
-	}
-	
-	var isVariantCollection: Bool {
-		self.as(IdentifierTypeSyntax.self)?.name.text == "VariantCollection"
-	}
-	
-	var isObjectCollection: Bool {
-		self.as(IdentifierTypeSyntax.self)?.name.text == "ObjectCollection"
-	}
-}
-
-private extension IdentifierTypeSyntax {
-	var genericElementName: String? {
-		guard let elementTypeName = genericArgumentClause?
-			.arguments
-			.first?
-			.argument
-			.as(IdentifierTypeSyntax.self)?
-			.name
-			.text else {
-			return nil
-		}
-		
-		return elementTypeName
-	}
-}
-
-private extension TypeSyntax {
-	var variantCollectionIdentifier: IdentifierTypeSyntax? {
-		guard let identifier = self.as(IdentifierTypeSyntax.self),
-			  identifier.name.text == "VariantCollection" else {
-			return nil
-		}
-		return identifier
-	}
-	
-	var variantCollectionElementTypeName: String? {
-		guard let identifier = variantCollectionIdentifier,
-			  let elementTypeName = identifier.genericElementName else {
-			return nil
-		}
-		
-		return elementTypeName
-	}
-	
-	var objectCollectionIdentifier: IdentifierTypeSyntax? {
-		guard let identifier = self.as(IdentifierTypeSyntax.self),
-			  identifier.name.text == "ObjectCollection" else {
-			return nil
-		}
-		return identifier
-	}
-	
-	var objectCollectionElementTypeName: String? {
-		guard let identifier = objectCollectionIdentifier,
-			  let elementTypeName = identifier.genericElementName else {
-			return nil
-		}
-		
-		return elementTypeName
-	}
-}
-
 private extension VariableDeclSyntax {
 	var type: TypeSyntax? {
 		guard let last = bindings.last,
@@ -160,6 +79,85 @@ private extension VariableDeclSyntax {
 			.as(IdentifierTypeSyntax.self)?
 			.genericElementName
 		else {
+			return nil
+		}
+		
+		return elementTypeName
+	}
+}
+
+extension TypeSyntax {
+	var isGArrayCollection: Bool {
+		isVariantCollection || isObjectCollection
+	}
+}
+
+private extension TypeSyntax {
+	var isArray: Bool {
+		isSquareArray || isGenericArray
+	}
+	
+	var isSquareArray: Bool {
+		self.is(ArrayTypeSyntax.self)
+	}
+	
+	// Array<String> for example
+	var isGenericArray: Bool {
+		self.as(IdentifierTypeSyntax.self)?.name.text == "Array"
+	}
+	
+	var isVariantCollection: Bool {
+		self.as(IdentifierTypeSyntax.self)?.name.text == "VariantCollection"
+	}
+	
+	var isObjectCollection: Bool {
+		self.as(IdentifierTypeSyntax.self)?.name.text == "ObjectCollection"
+	}
+
+	var variantCollectionIdentifier: IdentifierTypeSyntax? {
+		guard let identifier = self.as(IdentifierTypeSyntax.self),
+			  identifier.name.text == "VariantCollection" else {
+			return nil
+		}
+		return identifier
+	}
+	
+	var variantCollectionElementTypeName: String? {
+		guard let identifier = variantCollectionIdentifier,
+			  let elementTypeName = identifier.genericElementName else {
+			return nil
+		}
+		
+		return elementTypeName
+	}
+	
+	var objectCollectionIdentifier: IdentifierTypeSyntax? {
+		guard let identifier = self.as(IdentifierTypeSyntax.self),
+			  identifier.name.text == "ObjectCollection" else {
+			return nil
+		}
+		return identifier
+	}
+	
+	var objectCollectionElementTypeName: String? {
+		guard let identifier = objectCollectionIdentifier,
+			  let elementTypeName = identifier.genericElementName else {
+			return nil
+		}
+		
+		return elementTypeName
+	}
+}
+
+private extension IdentifierTypeSyntax {
+	var genericElementName: String? {
+		guard let elementTypeName = genericArgumentClause?
+			.arguments
+			.first?
+			.argument
+			.as(IdentifierTypeSyntax.self)?
+			.name
+			.text else {
 			return nil
 		}
 		
