@@ -214,7 +214,9 @@ var discardableResultList: [String: Set<String>] = [
     "PackedStringArray": ["append"],
     "PackedVector2Array": ["append"],
     "PackedVector3Array": ["append"],
-    "CharacterBody2D": ["move_and_slide"]
+    "CharacterBody2D": ["move_and_slide"],
+    "CharacterBody3D": ["move_and_slide"],
+    "RefCounted": ["reference", "unreference"]
 ]
 
 func generateMethod (_ p: Printer, method: MethodDefinition) {
