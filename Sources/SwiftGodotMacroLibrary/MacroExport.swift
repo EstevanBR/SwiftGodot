@@ -86,7 +86,7 @@ public struct GodotExport: PeerMacro {
         }
 		
 		guard varDecl.isArray == false else {
-			let classError = Diagnostic(node: declaration.root, message: GodotMacroError.requiresSwiftGodotCollection)
+			let classError = Diagnostic(node: declaration.root, message: GodotMacroError.requiresGArrayCollection)
 			context.diagnose(classError)
 			return []
 		}
@@ -140,23 +140,10 @@ public struct GodotExport: PeerMacro {
                 }
             }
 			
-			if let elementTypeName = varDecl.variantCollectionElementTypeName {
-				results.append(
-					contentsOf: createGArrayCollectionResults(
-						varName: varName,
-						elementTypeName: elementTypeName
-					)
-				)
-			} else
-			if let elementTypeName = varDecl.objectCollectionElementTypeName {
-				results.append(
-					contentsOf: createGArrayCollectionResults(
-						varName: varName,
-						elementTypeName: elementTypeName
-					)
-				)
-			} else
-			if let typeName = type.as(IdentifierTypeSyntax.self)?.name.text {
+			if let elementTypeName = varDecl.gArrayCollectionElementTypeName {
+				results.append (DeclSyntax(stringLiteral: makeGArrayCollectionGetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))
+				results.append (DeclSyntax(stringLiteral: makeGArrayCollectionSetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))
+			} else if let typeName = type.as(IdentifierTypeSyntax.self)?.name.text {
 				results.append (DeclSyntax(stringLiteral: makeSetAccessor(varName: varName, typeName: typeName, isOptional: isOptional)))
 				results.append (DeclSyntax(stringLiteral: makeGetAccessor(varName: varName, isOptional: isOptional)))
 			}
@@ -167,16 +154,7 @@ public struct GodotExport: PeerMacro {
 }
 
 private extension GodotExport {
-	static func createGArrayCollectionResults(varName: String, elementTypeName: String) -> [DeclSyntax] {
-		var results: [DeclSyntax] = []
-		
-		results.append (DeclSyntax(stringLiteral: makeGetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))
-		results.append (DeclSyntax(stringLiteral: makeSetProxyAccessor(varName: varName, elementTypeName: elementTypeName)))
-		
-		return results
-	}
-	
-	private static func makeGetProxyAccessor(varName: String, elementTypeName: String) -> String {
+	private static func makeGArrayCollectionGetProxyAccessor(varName: String, elementTypeName: String) -> String {
 		"""
 		func _mproxy_get_\(varName)(args: [Variant]) -> Variant? {
 			return Variant(\(varName).array)
@@ -184,7 +162,7 @@ private extension GodotExport {
 		"""
 	}
 	
-	private static func makeSetProxyAccessor(varName: String, elementTypeName: String) -> String {
+	private static func makeGArrayCollectionSetProxyAccessor(varName: String, elementTypeName: String) -> String {
 		"""
 		func _mproxy_set_\(varName)(args: [Variant]) -> Variant? {
 			guard let arg = args.first,

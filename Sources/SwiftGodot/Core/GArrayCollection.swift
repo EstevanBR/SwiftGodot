@@ -7,6 +7,7 @@
 
 @_implementationOnly import GDExtension
 
-protocol GArrayCollection: Collection {
+// If our exported Collections conform to this protocol, then we can use the same Macro code while exporting them
+protocol GArrayCollection<Element>: Collection where Element: VariantRepresentable {
 	var array: GArray { set get }
 }

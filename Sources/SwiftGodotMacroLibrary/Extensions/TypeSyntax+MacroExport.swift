@@ -13,32 +13,16 @@ extension VariableDeclSyntax {
 		type?.isSquareArray == true || type?.isGenericArray == true
 	}
 	
-	/// Returns `true` if type is a `VariantCollection<Element>`
-	var isVariantCollection: Bool {
-		type?.isVariantCollection == true
+	var isGArrayCollection: Bool {
+		isVariantCollection || isObjectCollection
 	}
 	
-	/// Returns `true` if type is a `ObjectCollection<Element>`
-	var isObjectCollection: Bool {
-		type?.isObjectCollection == true
-	}
-	
-	/// Returns `"Element"` for `VariantCollection<Element>`
-	var variantCollectionElementTypeName: String? {
-		guard isVariantCollection else {
-			return nil
-		}
-		
-		return type?.variantCollectionElementTypeName ?? genericInitializerElementTypeName
-	}
-	
-	/// Returns `"Element"` for `ObjectCollection<Element>`
-	var objectCollectionElementTypeName: String? {
-		guard isObjectCollection else {
-			return nil
-		}
-		
-		return type?.objectCollectionElementTypeName ?? genericInitializerElementTypeName
+	var gArrayCollectionElementTypeName: String? {
+		[
+			variantCollectionElementTypeName,
+		 	objectCollectionElementTypeName
+		]	.compactMap { $0 }
+			.first
 	}
 }
 
@@ -124,6 +108,34 @@ private extension VariableDeclSyntax {
 			return nil
 		}
 		return type
+	}
+	
+	/// Returns `true` if type is a `VariantCollection<Element>`
+	var isVariantCollection: Bool {
+		type?.isVariantCollection == true
+	}
+	
+	/// Returns `true` if type is a `ObjectCollection<Element>`
+	var isObjectCollection: Bool {
+		type?.isObjectCollection == true
+	}
+	
+	/// Returns `"Element"` for `VariantCollection<Element>`
+	var variantCollectionElementTypeName: String? {
+		guard isVariantCollection else {
+			return nil
+		}
+		
+		return type?.variantCollectionElementTypeName ?? genericInitializerElementTypeName
+	}
+	
+	/// Returns `"Element"` for `ObjectCollection<Element>`
+	var objectCollectionElementTypeName: String? {
+		guard isObjectCollection else {
+			return nil
+		}
+		
+		return type?.objectCollectionElementTypeName ?? genericInitializerElementTypeName
 	}
 	
 	var genericInitializerElementTypeName: String? {

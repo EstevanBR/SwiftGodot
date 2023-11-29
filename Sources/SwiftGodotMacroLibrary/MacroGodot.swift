@@ -105,7 +105,7 @@ class GodotMacroProcessor {
             type = optSyntax.wrappedType
         }
 		guard varDecl.isArray == false else {
-			throw GodotMacroError.requiresSwiftGodotCollection
+			throw GodotMacroError.requiresGArrayCollection
 		}
         guard let typeName = type.as (IdentifierTypeSyntax.self)?.name.text else {
             throw GodotMacroError.unsupportedType(varDecl)
@@ -180,7 +180,7 @@ class GodotMacroProcessor {
         }
     }
     
-    func processVariantCollectionVariable(_ varDecl: VariableDeclSyntax) throws {
+    func processGArrayCollectionVariable(_ varDecl: VariableDeclSyntax) throws {
         guard hasExportAttribute(varDecl.attributes) else {
             return
         }
@@ -192,9 +192,7 @@ class GodotMacroProcessor {
             throw GodotMacroError.noTypeFound(varDecl)
         }
 		
-		var elementTypeName: String? = varDecl.variantCollectionElementTypeName
-		elementTypeName = elementTypeName == nil ? varDecl.objectCollectionElementTypeName : elementTypeName
-		guard let elementTypeName else {
+		guard let elementTypeName = varDecl.gArrayCollectionElementTypeName else {
 			return
 		}
 		
@@ -297,10 +295,12 @@ class GodotMacroProcessor {
             // MacroExpansionDeclSyntax
 			if let funcDecl = FunctionDeclSyntax(decl) {
 				try processFunction (funcDecl)
-			} else if let varDecl = VariableDeclSyntax(decl), varDecl.isVariantCollection {
-				try processVariantCollectionVariable(varDecl)
 			} else if let varDecl = VariableDeclSyntax(decl) {
-				try processVariable(varDecl)
+				if varDecl.isGArrayCollection {
+					try processGArrayCollectionVariable(varDecl)
+				} else {
+					try processVariable(varDecl)
+				}
             } else if let macroDecl = MacroExpansionDeclSyntax(decl) {
                 try classInitSignals(macroDecl)
             }
