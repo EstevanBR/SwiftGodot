@@ -11,6 +11,15 @@ public enum ArrayError {
     case outOfRange
 }
 extension GArray: Collection {
+	public convenience init<T: VariantStorable>(_ type: T.Type = T.self) {
+		self.init(
+			base: GArray(),
+			type: Int32(T.Representable.godotType.rawValue),
+			className: T.Representable.godotType == .object ? StringName("\(T.self)") : StringName(),
+			script: Variant()
+		)
+	}
+	
     public func index(after i: Int) -> Int {
         return i+1
     }
@@ -40,54 +49,4 @@ extension GArray: Collection {
             ptr.pointee = newValue.content
         }
     }
-}
-
-extension GArray {
-	public convenience init<T: VariantRepresentable>(_ type: T.Type = T.self) {
-		self.init(
-			base: GArray(),
-			type: Int32(T.godotType.rawValue),
-			className: T.godotType == .object ? StringName("\(T.self)") : StringName(),
-			script: Variant()
-		)
-	}
-	
-	public convenience init<T: VariantRepresentable>(_ array: [T]) {
-		self.init(T.self)
-		GD.printDebug("array: \(array)")
-		array.forEach { append(value: Variant($0)) }
-		GD.printDebug("count: \(count)")
-	}
-	
-	public func asArray<T: VariantRepresentable>(_ type: T.Type = T.self) -> [T] {
-		GD.printDebug("count: \(count)")
-		let result: [T] = compactMap { T.makeOrUnwrap($0) }
-		GD.printDebug("result.count: \(result.count) [\(result)]")
-		return result
-	}
-}
-
-extension GArray {
-	public convenience init<T: VariantStorable>(_ type: T.Type = T.self) {
-		self.init(
-			base: GArray(),
-			type: Int32(T.Representable.godotType.rawValue),
-			className: T.Representable.godotType == .object ? StringName("\(T.self)") : StringName(),
-			script: Variant()
-		)
-	}
-	
-	public convenience init<T: VariantStorable>(_ array: [T]) {
-		self.init(T.self)
-		GD.printDebug("array: \(array)")
-		array.forEach { append(value: Variant($0)) }
-		GD.printDebug("count: \(count)")
-	}
-	
-	public func asArray<T: VariantStorable>(_ type: T.Type = T.self) -> [T] {
-		GD.printDebug("count: \(count)")
-		let result: [T] = compactMap { T.makeOrUnwrap($0) }
-		GD.printDebug("result.count: \(result.count) [\(result)]")
-		return result
-	}
 }
