@@ -36,9 +36,11 @@ extension GD {
     /// - Important: The path must be absolute, a local path will just return `nil`. This method is a simplified
     /// version of `ResourceLoader.load`, which can be used for more advanced scenarios.
     ///
+    /// - Parameter type: the `T.Type` of the `Resource` to load. eg: `Control.self`
+    ///
     /// - Parameter path: Path of the `Resource` to load.
     /// - Returns: The loaded `Resource`.
-    public static func load<T>(path: String) -> T? {
+    public static func load<T>(_ type: T.Type = T.self, path: String) -> T? {
         return ResourceLoader.load(path: path, cacheMode: .reuse) as? T
     }
 
