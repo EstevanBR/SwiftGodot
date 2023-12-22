@@ -61,7 +61,8 @@ if [ ! -z "$SWIFT_GODOT_NODEPLOY" ]; then
     exit
 fi
 
-(cd $outputDir; zip --symlinks -ru SwiftGodot.xcframework.zip SwiftGodot.xcframework)
+#(cd $outputDir; zip --symlinks -ru SwiftGodot.xcframework.zip SwiftGodot.xcframework)
+(cd $outputDir; ditto -c -k --sequesterRsrc --keepParent SwiftGodot.xcframework SwiftGodot.xcframework.zip)
 csum=`swift package compute-checksum $outputDir/SwiftGodot.xcframework.zip`
 
 gh release create $tag $outputDir/SwiftGodot.xcframework.zip -R migueldeicaza/SwiftGodot -F $2
@@ -82,11 +83,12 @@ let package = Package(
         .binaryTarget(
             name: "SwiftGodot",
             url: "https://github.com/migueldeicaza/SwiftGodot/releases/download/$tag/SwiftGodot.xcframework.zip",
-            checksum: "$csum")
+            checksum: "$csum"),
+        .testTarget(name: "SwiftGodotTests", dependencies: ["SwiftGodot"]),
     ]
 )
 EOF
 
-(cd ../SwiftGodotBinary; git tag $tag; git commit -m "Update to $tag" -a; git push)
+(cd ../SwiftGodotBinary; git tag $tag; git commit -m "Update to $tag" -a; git push; git push --tags)
 echo Started at: $start
 echo Ended at `date`

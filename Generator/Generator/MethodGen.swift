@@ -62,6 +62,22 @@ func isRefParameterOptional (className: String, method: String, arg: String) -> 
     }
 }
 
+/// The current code generation for passing parameters is both inefficient, and technically unsafe. We don't need
+/// to use nested invocations of withUnsafePointer to generate pointers to multiple arguments, but we can instead generate
+/// a helper version that generates multiple pointer in a single call. For example, if a function that we call using
+/// `gi.object_method_bind_ptrcall()` takes 2 arguments, we can generate the following generic helper:
+/// 
+/// ```
+/// func withUnsafePointers<T1, T2, ReturnType>(
+///     _ p1: UnsafePointer<T1>, _ p2: UnsafePointer<T2>,
+///     _ block: (UnsafePointer<T1>, UnsafePointer<T2>) -> ReturnType
+/// ) -> ReturnType {
+///     block(p1, p2)
+/// }
+/// ```
+/// This reduces the complexity of the generated code, and can be extended to an arbitrary number of parameters.
+/// 
+
 /// Generates a method definition
 /// - Parameters:
 ///  - p: Our printer to generate the method
@@ -69,7 +85,7 @@ func isRefParameterOptional (className: String, method: String, arg: String) -> 
 ///  - className: the name of the class where this is being generated
 ///  - usedMethods: a set of methods that have been referenced by properties, to determine whether we make this public or private
 /// - Returns: nil, or the method we surfaced that needs to have the virtual supporting infrastructured wired up
-func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef: JClassInfo?, docClass: DocClass?, usedMethods: Set<String>, kind: MethodGenType, asSingleton: Bool) -> String? {
+func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef: JClassInfo?, usedMethods: Set<String>, kind: MethodGenType, asSingleton: Bool) -> String? {
     var registerVirtualMethodName: String? = nil
     
     //let loc = "\(cdef.name).\(method.name)"
@@ -82,7 +98,6 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
 //        return nil
 //    }
     let bindName = "method_\(method.name)"
-    
     var visibility: String
     var allEliminate: String
     var finalp: String
@@ -140,6 +155,14 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
         registerVirtualMethodName = methodName
     }
     
+    struct Builder {
+        var setup = ""      // all variable copies and _result go here
+        var args: [String] = []
+        var call = ""       // call to helper goes here.
+        var result = ""     // return of _result goes here.
+    }
+    var builder = Builder()
+    
     var args = ""
     var argSetup = ""
     var varArgSetup = ""
@@ -157,6 +180,155 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
     let godotReturnTypeIsReferenceType = classMap [godotReturnType ?? ""] != nil
     let returnOptional = godotReturnTypeIsReferenceType && isReturnOptional(className: className, method: method.name)
     let returnType = getGodotType (method.returnValue) + (returnOptional ? "?" : "")
+
+    /// returns appropriate declaration of the return type, used by the helper function.
+    let frameworkType = godotReturnTypeIsReferenceType
+    func returnTypeDecl() -> String {
+        if returnType != "" {
+            guard let godotReturnType else {
+                fatalError ("If the returnType is not empty, we should have a godotReturnType")
+            }
+            if method.isVararg {
+                return "var _result: Variant.ContentType = Variant.zero"
+            } else if godotReturnType.starts(with: "typedarray::") {
+                let (storage, initialize) = getBuiltinStorage ("Array")
+                return "var _result: \(storage)\(initialize)"
+            } else if godotReturnType == "String" {
+                return "let _result = GString ()"
+            } else {
+                if godotReturnTypeIsReferenceType {
+                    // frameworkType = true
+                    return "var _result = UnsafeRawPointer (bitPattern: 0)"
+                } else {
+                    if godotReturnType.starts(with: "enum::") {
+                        return "var _result: Int = 0 // to avoid packed enums on the stack"
+                    } else {
+                        
+                        var declType: String = "let"
+                        if (argTypeNeedsCopy(godotType: godotReturnType)) {
+                            if builtinGodotTypeNames [godotReturnType] != .isClass {
+                                declType = "var"
+                            }
+                        }
+                        return "\(declType) _result: \(returnType) = \(makeDefaultInit(godotType: godotReturnType))"
+                    }
+                }
+            }
+        }
+        return ""
+    }
+    
+    func getArgsPtr() -> String {
+        (args != "") ? "&_args" : "nil"
+    }
+    
+    func getResultPtr() -> String {
+        let ptrResult: String
+        if returnType != "" {
+            guard let godotReturnType else { fatalError("godotReturnType is nil!") }
+
+            if method.isVararg {
+                ptrResult = "&_result"
+            } else if argTypeNeedsCopy(godotType: godotReturnType) {
+                let isClass = builtinGodotTypeNames [godotReturnType] == .isClass
+                
+                ptrResult = isClass ? "&_result.content" : "&_result"
+            } else {
+                if godotReturnType.starts (with: "typedarray::") {
+                    ptrResult = "&_result"
+                } else if frameworkType {
+                    ptrResult = "&_result"
+                } else if builtinSizes [godotReturnType] != nil {
+                    ptrResult = "&_result.content"
+                } else {
+                    ptrResult = "&_result.handle"
+                }
+            }
+        } else {
+            if method.isVararg {
+                ptrResult = "&_result"
+            } else {
+                ptrResult = "nil"
+            }
+        }
+        return ptrResult
+    }
+
+    /// this version inlines withArgPointers by calling `object_method_bind_call_v` or `gi.object_method_bind_ptrcall_v`
+    /// which builds the argument list using variadic arguments.
+    func call_object_method_bind_v(hasArgs: Bool, ptrResult: String) -> String {
+        switch kind {
+        case .class:
+            let instanceHandle = method.isStatic ? "nil, " : "UnsafeMutableRawPointer (mutating: \(asSingleton ? "shared." : "")handle), "
+            let argList = hasArgs ? ", \(builder.args.joined(separator: ", "))" : ""
+            if method.isVararg {
+                return "gi.object_method_bind_call_v (\(className).method_\(method.name), \(instanceHandle)\(ptrResult), nil\(argList))"
+            } else {
+                return "gi.object_method_bind_ptrcall_v (\(className).method_\(method.name), \(instanceHandle)\(ptrResult)\(argList))"
+            }
+        case .utility:
+            let ptrArgs = hasArgs ? "_args" : "nil"
+            let call_object_method_bind = if method.isVararg {
+                "\(bindName) (\(ptrResult), \(ptrArgs), Int32 (_args.count))"
+            } else {
+                "\(bindName) (\(ptrResult), \(ptrArgs), Int32 (\(method.arguments?.count ?? 0)))"
+            }
+            return
+                """
+                withArgPointers(\(builder.args.joined(separator: ", "))) { _args in
+                    \(call_object_method_bind)
+                }
+                """
+        }
+    }
+    
+    func call_object_method_bind(ptrArgs: String, ptrResult: String) -> String {
+        switch kind {
+        case .class:
+            let instanceHandle = method.isStatic ? "nil, " : "UnsafeMutableRawPointer (mutating: \(asSingleton ? "shared." : "")handle), "
+            if method.isVararg {
+                return "gi.object_method_bind_call (\(className).method_\(method.name), \(instanceHandle)\(ptrArgs), Int64 (_args.count), \(ptrResult), nil)"
+            } else {
+                return "gi.object_method_bind_ptrcall (\(className).method_\(method.name), \(instanceHandle)\(ptrArgs), \(ptrResult))"
+            }
+        case .utility:
+            if method.isVararg {
+                return "\(bindName) (\(ptrResult), \(ptrArgs), Int32 (_args.count))"
+            } else {
+                return "\(bindName) (\(ptrResult), \(ptrArgs), Int32 (\(method.arguments?.count ?? 0)))"
+            }
+        }
+    }
+    
+    func getReturnResult() -> String {
+        if returnType == "" {
+            return ""
+        }
+        guard returnType != "" else { return "" }
+        if method.isVararg {
+            if returnType == "Variant" {
+                return "return Variant (fromContent: _result)"
+            } else if returnType == "GodotError" {
+                return "return GodotError (rawValue: Int (Variant (fromContent: _result))!)!"
+            } else if returnType == "String" {
+                return "return GString (Variant (fromContent: _result))?.description ?? \"\""
+            } else {
+                fatalError("Do not support this return type = \(returnType)")
+            }
+        } else if frameworkType {
+            //print ("OBJ RETURN: \(className) \(method.name)")
+            return "guard let _result else { \(returnOptional ? "return nil" : "fatalError (\"Unexpected nil return from a method that should never return nil\")") } ; return lookupObject (nativeHandle: _result)!"
+        } else if godotReturnType?.starts(with: "typedarray::") ?? false {
+            let defaultInit = makeDefaultInit(godotType: godotReturnType!, initCollection: "content: _result")
+            return "return \(defaultInit)"
+        } else if godotReturnType?.starts(with: "enum::") ?? false {
+            return "return \(returnType) (rawValue: _result)!"
+        } else if godotReturnType == "String" {
+            return "return _result.description"
+        } else {
+            return "return _result"
+        }
+    }
     
     var withUnsafeCallNestLevel = 0
     var eliminate: String = allEliminate
@@ -209,6 +381,27 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
             if args != "" { args += ", "}
             args += "_ arguments: Variant..."
         }
+        // generate a helper function, a la withUnsafePointers() above, which
+        // combines extracting the parameters into pointers and packing them into the _args array.
+        // We can modularize this by creating functions that generate the return type and return
+        // statements.
+
+#if os(Windows)
+        // Workaround for: https://github.com/migueldeicaza/SwiftGodot/issues/299
+        builder.setup = "#if false\n\n"
+#else
+        if method.isVararg {
+            builder.setup = "#if false\n\n"
+        } else {
+            builder.setup = "#if true\n\n"
+        }
+#endif
+        builder.setup += argSetup
+        // Use implicit bridging to build _args array of type [UnsafeMutableRawPointer?]. This preserves the
+        // values of the parameters, because they are treated as inout parameters. Then cast to [UnsafeRawPointer?],
+        // because of how GDExtensionInterfaceObjectMethodBindPtrcall is declared: 
+        // public typealias GDExtensionInterfaceObjectMethodBindPtrcall = @convention(c) (GDExtensionMethodBindPtr?, GDExtensionObjectPtr?, UnsafePointer<GDExtensionConstTypePtr?>?, GDExtensionTypePtr?) -> Void
+        // UnsafePointer<GDExtensionConstTypePtr?>? is equivalent to UnsafePointer<UnsafeRawPointer?>? or [UnsafeRawPointer?].
         argSetup += "var _args: [UnsafeRawPointer?] = []\n"
         for arg in margs {
             // When we move from GString to String in the public API
@@ -260,13 +453,23 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
                 let accessPar = refParameterIsOptional ? "\(ea) == nil ? nil : p\(withUnsafeCallNestLevel)" : "p\(withUnsafeCallNestLevel)"
                 argSetup += "\(prefix)\(retFromWith)withUnsafePointer (to: \(ea)\(deref).handle) { p\(withUnsafeCallNestLevel) in\n\(prefix)_args.append (\(accessPar))\n"
                 withUnsafeCallNestLevel += 1
+                let handle_ref = "copy_\(arg.name)_handle"
+                builder.setup += "var \(handle_ref) = \(ea)\(deref).handle\n"
+                builder.args.append("&\(handle_ref)")
             } else {
                 argSetup += "\(prefix)\(retFromWith)withUnsafePointer (to: \(needAddress)\(escapeSwift(argref))\(optstorage)) { p\(withUnsafeCallNestLevel) in\n\(prefix)    _args.append (p\(withUnsafeCallNestLevel))\n"
                 withUnsafeCallNestLevel += 1
+                builder.args.append("\(needAddress)\(escapeSwift(argref))\(optstorage)")
             }
         }
         argSetup += varArgSetupInit
         argSetup += varArgSetup
+        builder.call =
+        """
+        \(call_object_method_bind_v(hasArgs: args != "", ptrResult: getResultPtr()))
+        \(getReturnResult())
+        #else\n
+        """
     } else if method.isVararg {
         // No regular arguments, check if these are varargs
         if method.isVararg {
@@ -280,13 +483,8 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
     if inline != "" {
         p (inline)
     }
-
-    if let docClass, let methods = docClass.methods {
-        if let docMethod = methods.method.first(where: { $0.name == method.name }) {
-            doc (p, cdef, docMethod.description)
-            // Sadly, the parameters have no useful documentation
-        }
-    }
+    // Sadly, the parameters have no useful documentation
+    doc (p, cdef, method.description)
     // Generate the method entry point
     if let classDiscardables = discardableResultList [className] {
         if classDiscardables.contains(method.name) == true {
@@ -301,37 +499,15 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
                 p (makeDefaultReturn (godotType: godotReturnType))
             }
         } else {
-            var frameworkType = false
             if returnType != "" {
-                guard let godotReturnType else {
-                    fatalError ("If the returnType is not empty, we should have a godotReturnType")
-                }
-                if method.isVararg {
-                    p ("var _result: Variant.ContentType = Variant.zero")
-                } else if godotReturnType.starts(with: "typedarray::") {
-                    let (storage, initialize) = getBuiltinStorage ("Array")
-                    p ("var _result: \(storage)\(initialize)")
-                } else if godotReturnType == "String" {
-                    p ("let _result = GString ()")
-                } else {
-                    if godotReturnTypeIsReferenceType {
-                        frameworkType = true
-                        p ("var _result = UnsafeRawPointer (bitPattern: 0)")
-                    } else {
-                        if godotReturnType.starts(with: "enum::") {
-                            p ("var _result: Int = 0 // to avoid packed enums on the stack")
-                        } else {
-                            
-                            var declType: String = "let"
-                            if (argTypeNeedsCopy(godotType: godotReturnType)) {
-                                if builtinGodotTypeNames [godotReturnType] != .isClass {
-                                    declType = "var"
-                                }
-                            }
-                            p ("\(declType) _result: \(returnType) = \(makeDefaultInit(godotType: godotReturnType))")
-                        }
-                    }
-                }
+                p(returnTypeDecl())
+            } else if (method.isVararg) {
+                p ("var _result: Variant.ContentType = Variant.zero")
+            }
+            
+            if builder.setup != "" {
+                p(builder.setup)
+                p(builder.call)
             }
             
             if argSetup != "" {
@@ -340,81 +516,11 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
             if withUnsafeCallNestLevel > 0 {
                 p.indent += withUnsafeCallNestLevel
             }
-            
-            let ptrArgs = (args != "") ? "&_args" : "nil"
-            let ptrResult: String
-            if returnType != "" {
-                guard let godotReturnType else { return }
 
-                if method.isVararg {
-                    ptrResult = "&_result"
-                } else if argTypeNeedsCopy(godotType: godotReturnType) {
-                    let isClass = builtinGodotTypeNames [godotReturnType] == .isClass
-                    
-                    ptrResult = isClass ? "&_result.content" : "&_result"
-                } else {
-                    if godotReturnType.starts (with: "typedarray::") {
-                        ptrResult = "&_result"
-                    } else if frameworkType {
-                        ptrResult = "&_result"
-                    } else if builtinSizes [godotReturnType] != nil {
-                        ptrResult = "&_result.content"
-                    } else {
-                        ptrResult = "&_result.handle"
-                    }
-                }
-            } else {
-                ptrResult = "nil"
-            }
-            
-            switch kind {
-            case .class:
-                let instanceHandle = method.isStatic ? "nil, " : "UnsafeMutableRawPointer (mutating: \(asSingleton ? "shared." : "")handle), "
-                if method.isVararg {
-                    p ("gi.object_method_bind_call (\(className).method_\(method.name), \(instanceHandle)\(ptrArgs), Int64 (_args.count), \(ptrResult), nil)")
-                } else {
-                    p ("gi.object_method_bind_ptrcall (\(className).method_\(method.name), \(instanceHandle)\(ptrArgs), \(ptrResult))")
-                }
-            case .utility:
-                if method.isVararg {
-                    p ("\(bindName) (\(ptrResult), \(ptrArgs), Int32 (_args.count))")
-                } else {
-                    p ("\(bindName) (\(ptrResult), \(ptrArgs), Int32 (\(method.arguments?.count ?? 0)))")
-                }
-            }
+            p(call_object_method_bind(ptrArgs: getArgsPtr(), ptrResult: getResultPtr()))
             
             if returnType != "" {
-                if method.isVararg {
-                    if returnType == "Variant" {
-                        p ("return Variant (fromContent: _result)")
-                    } else if returnType == "GodotError" {
-                        p ("return GodotError (rawValue: Int (Variant (fromContent: _result))!)!")
-                    } else if returnType == "String" {
-                        p ("return GString (Variant (fromContent: _result))?.description ?? \"\"")
-                    } else {
-                        fatalError("Do not support this return type")
-                    }
-                } else if frameworkType {
-                    //print ("OBJ RETURN: \(className) \(method.name)")
-                    p ("guard let _result else") {
-                        if returnOptional {
-                            p ("return nil")
-                        } else {
-                            p ("fatalError (\"Unexpected nil return from a method that should never return nil\")")
-                        }
-                    }
-                    p ("return lookupObject (nativeHandle: _result)!")
-                } else if godotReturnType?.starts(with: "typedarray::") ?? false {
-                    let defaultInit = makeDefaultInit(godotType: godotReturnType!, initCollection: "content: _result")
-                    
-                    p ("return \(defaultInit)")
-                } else if godotReturnType!.starts(with: "enum::"){
-                    p ("return \(returnType) (rawValue: _result)!")
-                } else if godotReturnType == "String" {
-                    p ("return _result.description")
-                } else {
-                    p ("return _result")
-                }
+                p (getReturnResult())
             }
             
             // Unwrap the nested calls to 'withUnsafePointer'
@@ -422,6 +528,11 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
                 withUnsafeCallNestLevel -= 1
                 p.indent -= 1
                 p ("}")
+            }
+            
+// REFACTOR: just so we can see the two side-by-side
+            if builder.setup != "" {
+                p ("\n#endif")
             }
         }
     }

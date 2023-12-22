@@ -10,3 +10,5 @@ DerivedData/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
 *~
+build-docs.log
+.nova/

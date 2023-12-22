@@ -9,12 +9,28 @@ all:
 	echo    - sync: synchronizes the Macro system to the ../SwiftGodotBinary module
 
 build-docs:
-	GENERATE_DOCS=1 swift package --allow-writing-to-directory $(ODOCS) generate-documentation --target SwiftGodot --disable-indexing --transform-for-static-hosting --hosting-base-path /SwiftGodotDocs --emit-digest --output-path $(ODOCS) >& build-docs.log
+	GENERATE_DOCS=1 swift package \
+		--allow-writing-to-directory $(ODOCS) \
+		generate-documentation \
+		--target SwiftGodot \
+		--disable-indexing \
+		--transform-for-static-hosting \
+		--hosting-base-path /SwiftGodotDocs \
+		--source-service github \
+		--source-service-base-url https://github.com/migueldeicaza/SwiftGodot/blob/main \
+		--checkout-path . \
+		--emit-digest \
+		--output-path $(ODOCS) \
+		--verbose \
+		>& build-docs.log
 
 preview-docs:
 	GENERATE_DOCS=1 swift package --disable-sandbox preview-documentation --target SwiftGodot --disable-indexing --emit-digest
 
 push-docs:
+	cp scripts/google1fb990296a5c506c.html ../SwiftGodotDocs/docs/documentation/swiftgodot/
+	(cd ../SwiftGodotDocs/docs/; find . -name '*html' | sed -e 's,^.,https://migueldeicaza.github.io/SwiftGodotDocs,' -e 's,/index.html,,') > ../SwiftGodotDocs/docs/documentation/swiftgodot/sitemap.txt
+
 	(cd ../SwiftGodotDocs; mv docs tmp; git reset --hard 8b5f69a631f42a37176a040aeb5cfa1620249ff1; mv tmp docs; touch .nojekyll docs/.nojekyll; git add docs/* .nojekyll docs/.nojekyll; git commit -m "Import Docs"; git push -f; git prune)
 
 release: check-args build-release build-docs push-docs

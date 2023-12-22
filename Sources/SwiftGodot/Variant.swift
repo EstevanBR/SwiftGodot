@@ -132,6 +132,7 @@ public class Variant: Hashable, Equatable, CustomDebugStringConvertible {
                 }
             } else {
                 var mutableValue = value
+                
                 withUnsafeMutablePointer(to: &mutableValue) { ptr in
                     Variant.fromTypeMap [godotType.rawValue] (selfPtr, ptr)
                 }
@@ -139,6 +140,7 @@ public class Variant: Hashable, Equatable, CustomDebugStringConvertible {
         }
     }
     
+    /// This describes the type of the data wrapped by this variant
     public var gtype: GType {
         var copy = content
         return GType (rawValue: Int (gi.variant_get_type (&copy).rawValue)) ?? .nil
@@ -150,8 +152,16 @@ public class Variant: Hashable, Equatable, CustomDebugStringConvertible {
         }
     }
     
+    /// Returns true if the variant is flagged as being an object (`gtype == .object`) and it has a nil pointer.
+    public var isNull: Bool {
+        return asObject(Object.self) == nil
+    }
+    
     ///
-    /// Attempts to cast the Variant into a GodotObject, this requires that the Variant value be of type `.object`.
+    /// Attempts to cast the Variant into a GodotObject, if the variant contains a value of type `.object`, then
+    // this will return the object.  If the variant contains the nil value, or the content of the variant is not
+    /// a `.object, the value `nil` is returned.
+    ///
     /// - Parameter type: the desired type eg. `.asObject(Node.self)`
     /// - Returns: nil on error, or the type on success
     ///
