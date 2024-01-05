@@ -287,7 +287,7 @@ func generateBuiltinOperators (_ p: Printer,
             guard let (operatorCode, swiftOperator) = infixOperatorMap (op.name) else {
                 continue
             }
-            p ("static var \(ptrName): GDExtensionPtrOperatorEvaluator = ", suffix: "()"){
+            p.staticVar (name: ptrName, type: "GDExtensionPtrOperatorEvaluator") {
                 let rightTypeCode = builtinTypecode (right)
                 let leftTypeCode = builtinTypecode (godotTypeName)
                 p ("return gi.variant_get_ptr_operator_evaluator (\(operatorCode), \(leftTypeCode), \(rightTypeCode))!")
@@ -363,7 +363,7 @@ func generateBuiltinMethods (_ p: Printer,
     
         let ptrName = "method_\(m.name)"
         
-        p ("static var \(ptrName): GDExtensionPtrBuiltInMethod = ", suffix: "()"){
+        p.staticVar (name: ptrName, type: "GDExtensionPtrBuiltInMethod") {
             p ("let name = StringName (\"\(m.name)\")")
             p ("return gi.variant_get_ptr_builtin_method (\(typeEnum), &name.content, \(m.hash))!")
         }
@@ -379,19 +379,27 @@ func generateBuiltinMethods (_ p: Printer,
             p ("@discardableResult /* 1: \(m.name) */ ")
         }
 
-        p ("public\(isStruct ? "" : " final") func \(escapeSwift (snakeToCamel(m.name))) (\(args))\(retSig)") {
+        let keyword: String
+        if m.isStatic {
+            keyword = " static"
+        } else if !isStruct {
+            keyword = " final"
+        } else {
+            keyword = ""
+        }
+        p ("public\(keyword) func \(escapeSwift (snakeToCamel(m.name))) (\(args))\(retSig)") {
             
             generateMethodCall (p, typeName: typeName, methodToCall: ptrName, godotReturnType: m.returnType, isStatic: m.isStatic, arguments: m.arguments, kind: .methodCall)
         }
     }
     if bc.isKeyed {
-        p ("static var keyed_setter: GDExtensionPtrKeyedSetter = ", suffix: "()") {
+        p.staticVar (name: "keyed_setter", type: "GDExtensionPtrKeyedSetter") {
             p ("return gi.variant_get_ptr_keyed_setter (GDEXTENSION_VARIANT_TYPE_DICTIONARY)!")
         }
-        p ("static var keyed_getter: GDExtensionPtrKeyedGetter = ", suffix: "()") {
+        p.staticVar(name: "keyed_getter", type: "GDExtensionPtrKeyedGetter") {
             p ("return gi.variant_get_ptr_keyed_getter (GDEXTENSION_VARIANT_TYPE_DICTIONARY)!")
         }
-        p ("static var keyed_checker: GDExtensionPtrKeyedChecker = ", suffix: "()") {
+        p.staticVar(name: "keyed_checker", type: "GDExtensionPtrKeyedChecker") {
             p ("return gi.variant_get_ptr_keyed_checker (GDEXTENSION_VARIANT_TYPE_DICTIONARY)!")
         }
         p ("public subscript (key: Variant) -> Variant?") {
@@ -540,7 +548,7 @@ func generateBuiltinClasses (values: [JGodotBuiltinClass], outputDir: String?) a
                 }
             }
             if bc.hasDestructor {
-                p ("static var destructor: GDExtensionPtrDestructor = ", suffix: "()"){
+                p.staticVar (name: "destructor", type: "GDExtensionPtrDestructor") {
                     p ("return gi.variant_get_ptr_destructor (\(typeEnum))!")
                 }
                 
