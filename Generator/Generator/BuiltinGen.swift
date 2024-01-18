@@ -146,6 +146,24 @@ func generateBuiltinCtors (_ p: Printer,
                     p ("self.green = 0")
                     p ("self.blue = 0")
                     p ("self.alpha = 0")
+                } else if bc.name == "Quaternion" && m.arguments == nil {
+                    p ("self.x = 0")
+                    p ("self.y = 0")
+                    p ("self.z = 0")
+                    p ("self.w = 1")
+                } else if bc.name == "Transform2D" && m.arguments == nil {
+                    p ("self.x = Vector2 (x: 1, y: 0)")
+                    p ("self.y = Vector2 (x: 0, y: 1)")
+                    p ("self.origin = Vector2 ()")                    
+                } else if bc.name == "Basis" && m.arguments == nil {
+                    p ("self.x = Vector3 (x: 1, y: 0, z: 0)")
+                    p ("self.y = Vector3 (x: 0, y: 1, z: 0)")
+                    p ("self.z = Vector3 (x: 0, y: 0, z: 1)")
+                } else if bc.name == "Projection" && m.arguments == nil {
+                    p ("self.x = Vector4 (x: 1, y: 0, z: 0, w: 0)")
+                    p ("self.y = Vector4 (x: 0, y: 1, z: 0, w: 0)")
+                    p ("self.z = Vector4 (x: 0, y: 0, z: 1, w: 0)")
+                    p ("self.w = Vector4 (x: 0, y: 0, z: 0, w: 1)")
                 } else {
                     for x in members {
                         p ("self.\(x.name) = \(MemberBuiltinJsonTypeToSwift(x.type)) ()")
@@ -369,8 +387,15 @@ func generateBuiltinMethods (_ p: Printer,
         }
         
         for arg in m.arguments ?? [] {
+            var eliminate: String = ""
+            if args.isEmpty, m.name.hasSuffix ("_\(arg.name)") {
+                // if the first argument name matches the last part of the method name, we want
+                // to skip giving it a name.   For example:
+                // addPattern (pattern: xx) becomes addPattern (_ pattern: xx)
+                eliminate = "_ "
+            }
             if args != "" { args += ", " }
-            args += getArgumentDeclaration(arg, eliminate: "", isOptional: false)
+            args += getArgumentDeclaration(arg, eliminate: eliminate, isOptional: false)
         }
         
         doc (p, bc, m.description)
@@ -459,7 +484,7 @@ func generateBuiltinClasses (values: [JGodotBuiltinClass], outputDir: String?) a
             conformances.append ("ExpressibleByStringInterpolation")
             conformances.append ("LosslessStringConvertible")
         }
-        if bc.name.starts(with: "Packed") {
+        if bc.name.hasSuffix ("Array") {
             conformances.append ("Collection")
         }
         var proto = ""
@@ -652,7 +677,7 @@ func generateBuiltinClasses (values: [JGodotBuiltinClass], outputDir: String?) a
                     }
                 }
             }
-            if bc.name.starts(with: "Packed") {
+            if bc.name.hasSuffix ("Array") {
                 p ("public var startIndex: Int") {
                     p ("0")
                 }
