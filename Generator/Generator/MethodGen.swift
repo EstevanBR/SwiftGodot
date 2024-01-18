@@ -110,7 +110,7 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
         assert (!method.isVirtual)
         switch kind {
         case .class:
-            p ("\(staticVarVisibility)static var \(bindName): GDExtensionMethodBindPtr =", suffix: "()") {
+            p.staticVar(visibility: staticVarVisibility, name: bindName, type: "GDExtensionMethodBindPtr") {
                 p ("let methodName = StringName (\"\(method.name)\")")
             
                 p ("return withUnsafePointer (to: &\(className).godotClassName.content)", arg: " classPtr in") {
@@ -120,7 +120,7 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
                 }
             }
         case .utility:
-            p ("\(staticVarVisibility)static var \(bindName): GDExtensionPtrUtilityFunction =", suffix: "()") {
+            p.staticVar(visibility: staticVarVisibility, name: bindName, type: "GDExtensionPtrUtilityFunction") {
                 p ("let methodName = StringName (\"\(method.name)\")")
                 p ("return withUnsafePointer (to: &methodName.content)", arg: " ptr in") {
                     p ("return gi.variant_get_ptr_utility_function (ptr, \(methodHash))!")
@@ -201,7 +201,7 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
                     return "var _result = UnsafeRawPointer (bitPattern: 0)"
                 } else {
                     if godotReturnType.starts(with: "enum::") {
-                        return "var _result: Int = 0 // to avoid packed enums on the stack"
+                        return "var _result: Int64 = 0 // to avoid packed enums on the stack"
                     } else {
                         
                         var declType: String = "let"
@@ -309,7 +309,7 @@ func methodGen (_ p: Printer, method: MethodDefinition, className: String, cdef:
             if returnType == "Variant" {
                 return "return Variant (fromContent: _result)"
             } else if returnType == "GodotError" {
-                return "return GodotError (rawValue: Int (Variant (fromContent: _result))!)!"
+                return "return GodotError (rawValue: Int64 (Variant (fromContent: _result))!)!"
             } else if returnType == "String" {
                 return "return GString (Variant (fromContent: _result))?.description ?? \"\""
             } else {

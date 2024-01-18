@@ -14,6 +14,10 @@ var token: GDExtensionClassLibraryPtr! {
     return library
 }
 
+/// This variable is used to trigger a reloading of the method definitions in Godot, this is only needed
+/// for scenarios where SwiftGodot is being used with multiple active Godot runtimes in the same process
+public var swiftGodotLibraryGeneration: UInt16 = 0
+
 var extensionInitCallbacks: [((GDExtension.InitializationLevel)->())] = []
 var extensionDeInitCallbacks: [((GDExtension.InitializationLevel)->())] = []
 
@@ -37,8 +41,8 @@ public func setExtensionInterface (to: OpaquePointer?, library lib: OpaquePointe
 
 // Extension initialization callback
 func extension_initialize (userData: UnsafeMutableRawPointer?, l: GDExtensionInitializationLevel) {
-    print ("SWIFT: extension_initialize")
-    let level = GDExtension.InitializationLevel(rawValue: Int (exactly: l.rawValue)!)!
+    //print ("SWIFT: extension_initialize")
+    let level = GDExtension.InitializationLevel(rawValue: Int64 (exactly: l.rawValue)!)!
     
     for cb in extensionInitCallbacks {
         cb (level)
@@ -47,9 +51,9 @@ func extension_initialize (userData: UnsafeMutableRawPointer?, l: GDExtensionIni
 
 // Extension deinitialization callback
 func extension_deinitialize (userData: UnsafeMutableRawPointer?, l: GDExtensionInitializationLevel) {
-    print ("SWIFT: extension_deinitialize")
+    //print ("SWIFT: extension_deinitialize")
     
-    let level = GDExtension.InitializationLevel(rawValue: Int (exactly: l.rawValue)!)!
+    let level = GDExtension.InitializationLevel(rawValue: Int64 (exactly: l.rawValue)!)!
     for cb in extensionDeInitCallbacks {
         cb (level)
     }
