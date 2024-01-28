@@ -69,8 +69,11 @@ final class MacroGodotTests: XCTestCase {
                     let classInfo = ClassInfo<Hi> (name: className)
                 } ()
 
-                override public class func implementedOverrides() -> [StringName] {
-                    super.implementedOverrides() + [
+                override public class func implementedOverrides () -> [StringName] {
+                    guard !Engine.isEditorHint () else {
+                        return []
+                    }
+                    return super.implementedOverrides () + [
                     	StringName("_has_point"),
                     ]
                 }
@@ -83,7 +86,7 @@ final class MacroGodotTests: XCTestCase {
     func testGodotVirtualMethodsMacro() {
         assertMacroExpansion(
             """
-            @Godot class Hi: Control {
+            @Godot(.tool) class Hi: Control {
                 override func _hasPoint(_ point: Vector2) -> Bool { false }
             }
             """,
@@ -102,8 +105,8 @@ final class MacroGodotTests: XCTestCase {
                     let classInfo = ClassInfo<Hi> (name: className)
                 } ()
             
-                override open class func implementedOverrides() -> [StringName] {
-                    super.implementedOverrides() + [
+                override open class func implementedOverrides () -> [StringName] {
+                    return super.implementedOverrides () + [
                     	StringName("_has_point"),
                     ]
                 }
@@ -302,7 +305,7 @@ final class MacroGodotTests: XCTestCase {
                     let oldRef = dynamicCast (data, as: RefCounted.self)
                     if let res: MyData = args [0].asObject () {
                         dynamicCast (res, as: RefCounted.self)?.reference()
-                        data = res
+                        self.data = res
                     }
                     oldRef?.unreference()
                 	return nil
@@ -821,7 +824,7 @@ final class MacroGodotTests: XCTestCase {
             			return nil
             		}
             		if let value = String (arg) {
-            			goodName = value
+            			self.goodName = value
             		} else {
             			GD.printErr ("Unable to set `goodName` value: ", arg)
             		}
