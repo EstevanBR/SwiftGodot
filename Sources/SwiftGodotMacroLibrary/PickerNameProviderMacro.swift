@@ -28,7 +28,7 @@ public struct PickerNameProviderMacro: ExtensionMacro {
             case .notAnEnum:
                 return "@PickerNameProvider can only be applied to an 'enum'"
             case .missingInt:
-                return "@PickerNameProvider requires an Int backing"
+                return "@PickerNameProvider requires an Int64 backing"
             }
         }
 
@@ -56,13 +56,7 @@ public struct PickerNameProviderMacro: ExtensionMacro {
         }
 
         let types = inheritors.map { $0.type.as(IdentifierTypeSyntax.self) }
-        let names = types.map { $0?.name.text }
-
-        guard names.contains("Int") else {
-            let missingInt = Diagnostic(node: declaration.root, message: ProviderDiagnostic.missingInt)
-            context.diagnose(missingInt)
-            return []
-        }
+        //let names = types.map { $0?.name.text }
 
         let members = enumDecl.memberBlock.members
         let cases = members.compactMap { $0.decl.as(EnumCaseDeclSyntax.self) }

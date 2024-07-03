@@ -18,8 +18,8 @@ var token: GDExtensionClassLibraryPtr! {
 /// for scenarios where SwiftGodot is being used with multiple active Godot runtimes in the same process
 public var swiftGodotLibraryGeneration: UInt16 = 0
 
-var extensionInitCallbacks: [((GDExtension.InitializationLevel)->())] = []
-var extensionDeInitCallbacks: [((GDExtension.InitializationLevel)->())] = []
+var extensionInitCallbacks: [OpaquePointer:((GDExtension.InitializationLevel)->())] = [:]
+var extensionDeInitCallbacks: [OpaquePointer:((GDExtension.InitializationLevel)->())] = [:]
 
 func loadFunctions (loader: GDExtensionInterfaceGetProcAddress) {
     
@@ -42,20 +42,23 @@ public func setExtensionInterface (to: OpaquePointer?, library lib: OpaquePointe
 // Extension initialization callback
 func extension_initialize (userData: UnsafeMutableRawPointer?, l: GDExtensionInitializationLevel) {
     //print ("SWIFT: extension_initialize")
-    let level = GDExtension.InitializationLevel(rawValue: Int64 (exactly: l.rawValue)!)!
-    
-    for cb in extensionInitCallbacks {
-        cb (level)
-    }
+    guard let level = GDExtension.InitializationLevel(rawValue: Int64 (exactly: l.rawValue)!) else { return }
+    guard let userData else { return }
+    guard let callback = extensionInitCallbacks [OpaquePointer(userData)] else { return }
+    callback (level)
 }
 
 // Extension deinitialization callback
 func extension_deinitialize (userData: UnsafeMutableRawPointer?, l: GDExtensionInitializationLevel) {
     //print ("SWIFT: extension_deinitialize")
-    
-    let level = GDExtension.InitializationLevel(rawValue: Int64 (exactly: l.rawValue)!)!
-    for cb in extensionDeInitCallbacks {
-        cb (level)
+    guard let userData else { return }
+    let key = OpaquePointer(userData)
+    guard let callback = extensionDeInitCallbacks [key] else { return }
+    guard let level = GDExtension.InitializationLevel(rawValue: Int64 (exactly: l.rawValue)!) else { return }
+    callback (level)
+    if level == .core {
+        // Last one, remove 
+        extensionDeInitCallbacks.removeValue(forKey: key)
     }
 }
 
@@ -162,6 +165,7 @@ struct GodotInterface {
     let variant_hash: GDExtensionInterfaceVariantHash
     let variant_destroy: GDExtensionInterfaceVariantDestroy
     let variant_get_type: GDExtensionInterfaceVariantGetType
+    let variant_get_type_name: GDExtensionInterfaceVariantGetTypeName
     let variant_stringify: GDExtensionInterfaceVariantStringify
     let variant_call: GDExtensionInterfaceVariantCall
     let variant_call_static: GDExtensionInterfaceVariantCallStatic
@@ -186,15 +190,24 @@ struct GodotInterface {
     let array_set_typed: GDExtensionInterfaceArraySetTyped
     
     let packed_string_array_operator_index: GDExtensionInterfacePackedStringArrayOperatorIndex
+    let packed_string_array_operator_index_const: GDExtensionInterfacePackedStringArrayOperatorIndexConst
     let packed_byte_array_operator_index: GDExtensionInterfacePackedByteArrayOperatorIndex
+    let packed_byte_array_operator_index_const: GDExtensionInterfacePackedByteArrayOperatorIndexConst
     let packed_color_array_operator_index: GDExtensionInterfacePackedColorArrayOperatorIndex
+    let packed_color_array_operator_index_const: GDExtensionInterfacePackedColorArrayOperatorIndexConst
     let packed_float32_array_operator_index: GDExtensionInterfacePackedFloat32ArrayOperatorIndex
+    let packed_float32_array_operator_index_const: GDExtensionInterfacePackedFloat32ArrayOperatorIndexConst
     let packed_float64_array_operator_index: GDExtensionInterfacePackedFloat64ArrayOperatorIndex
+    let packed_float64_array_operator_index_const: GDExtensionInterfacePackedFloat64ArrayOperatorIndexConst
     let packed_int32_array_operator_index: GDExtensionInterfacePackedInt32ArrayOperatorIndex
+    let packed_int32_array_operator_index_const: GDExtensionInterfacePackedInt32ArrayOperatorIndexConst
     let packed_int64_array_operator_index: GDExtensionInterfacePackedInt64ArrayOperatorIndex
+    let packed_int64_array_operator_index_const: GDExtensionInterfacePackedInt64ArrayOperatorIndexConst
     let packed_vector2_array_operator_index: GDExtensionInterfacePackedVector2ArrayOperatorIndex
+    let packed_vector2_array_operator_index_const: GDExtensionInterfacePackedVector2ArrayOperatorIndexConst
     let packed_vector3_array_operator_index: GDExtensionInterfacePackedVector3ArrayOperatorIndex
-    
+    let packed_vector3_array_operator_index_const: GDExtensionInterfacePackedVector3ArrayOperatorIndexConst
+
     let callable_custom_create: GDExtensionInterfaceCallableCustomCreate
 }
 
@@ -258,6 +271,7 @@ func loadGodotInterface (_ godotGetProcAddrPtr: GDExtensionInterfaceGetProcAddre
         variant_hash: load ("variant_hash"),
         variant_destroy: load ("variant_destroy"),
         variant_get_type: load ("variant_get_type"),
+        variant_get_type_name: load ("variant_get_type_name"),
         variant_stringify: load ("variant_stringify"),
         variant_call: load ("variant_call"),
         variant_call_static: load ("variant_call_static"),
@@ -280,15 +294,24 @@ func loadGodotInterface (_ godotGetProcAddrPtr: GDExtensionInterfaceGetProcAddre
         array_set_typed: load ("array_set_typed"),
         
         packed_string_array_operator_index: load ("packed_string_array_operator_index"),
+        packed_string_array_operator_index_const: load ("packed_string_array_operator_index_const"),
         packed_byte_array_operator_index: load ("packed_byte_array_operator_index"),
+        packed_byte_array_operator_index_const: load ("packed_byte_array_operator_index_const"),
         packed_color_array_operator_index: load ("packed_color_array_operator_index"),
+        packed_color_array_operator_index_const: load ("packed_color_array_operator_index_const"),
         packed_float32_array_operator_index: load ("packed_float32_array_operator_index"),
+        packed_float32_array_operator_index_const: load ("packed_float32_array_operator_index_const"),
         packed_float64_array_operator_index: load ("packed_float64_array_operator_index"),
+        packed_float64_array_operator_index_const: load ("packed_float64_array_operator_index_const"),
         packed_int32_array_operator_index: load ("packed_int32_array_operator_index"),
+        packed_int32_array_operator_index_const: load ("packed_int32_array_operator_index_const"),
         packed_int64_array_operator_index: load ("packed_int64_array_operator_index"),
+        packed_int64_array_operator_index_const: load ("packed_int64_array_operator_index_const"),
         packed_vector2_array_operator_index: load ("packed_vector2_array_operator_index"),
+        packed_vector2_array_operator_index_const: load ("packed_vector2_array_operator_index_const"),
         packed_vector3_array_operator_index: load ("packed_vector3_array_operator_index"),
-        
+        packed_vector3_array_operator_index_const: load ("packed_vector3_array_operator_index_const"),
+
         callable_custom_create: load ("callable_custom_create")
     )
 }
@@ -349,12 +372,13 @@ public func initializeSwiftModule (
     if library == nil {
         library = GDExtensionClassLibraryPtr(libraryPtr)
     }
-    extensionInitCallbacks = [initHook]
-    extensionDeInitCallbacks = [deInitHook]
+    extensionInitCallbacks [libraryPtr] = initHook
+    extensionDeInitCallbacks [libraryPtr] = deInitHook
     let initialization = UnsafeMutablePointer<GDExtensionInitialization> (extensionPtr)
     initialization.pointee.deinitialize = extension_deinitialize
     initialization.pointee.initialize = extension_initialize
     initialization.pointee.minimum_initialization_level = GDEXTENSION_INITIALIZATION_SCENE
+    initialization.pointee.userdata = UnsafeMutableRawPointer(libraryPtr)
 }
 
 /*

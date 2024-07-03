@@ -70,11 +70,13 @@ func pd (_ str: String) {
 /// If you do not call this method, many of the overloads that Godot would
 /// call you back on will not be invoked.
 open class Wrapped: Equatable, Identifiable, Hashable {
+    static let invalidHandle = UnsafeRawPointer(bitPattern: -1)!
     /// Points to the underlying object
     public var handle: UnsafeRawPointer
     public static var fcallbacks = OpaquePointer (UnsafeRawPointer (&Wrapped.frameworkTypeBindingCallback))
     public static var ucallbacks = OpaquePointer (UnsafeRawPointer (&Wrapped.userTypeBindingCallback))
     
+    /// Conformance to Identifiable by using the native handle to the object
     public var id: Int { Int (bitPattern: handle) }
     
     public static func == (lhs: Wrapped, rhs: Wrapped) -> Bool {
@@ -137,6 +139,15 @@ open class Wrapped: Equatable, Identifiable, Hashable {
         handle = nativeHandle
     }
     
+    /// This property indicates if the instance is valid or not.
+    ///
+    /// In Godot, some objects can be freed manually, and in particular
+    /// when you call the ``Node/queueFree()`` which might queue the object
+    /// for disposal
+    public var isValid: Bool {
+        return handle != Wrapped.invalidHandle
+    }
+
     /// The constructor chain that uses StringName is internal, and is triggered
     /// when a class is initialized with the empty constructor - this means that
     /// subclasses will have a different name than the subclass.
@@ -241,7 +252,6 @@ public func register<T:Wrapped> (type: T.Type) {
     }
     let typeStr = String (describing: type)
     let superStr = String(describing: superType)
-    pd("Registering \(typeStr) : \(superStr)")
     register (type: StringName (typeStr), parent: StringName (superStr), type: type)
 }
 
@@ -256,8 +266,8 @@ public func unregister<T:Wrapped> (type: T.Type) {
 
 /// Currently contains all instantiated objects, but might want to separate those
 /// (or find a way of easily telling appart) framework objects from user subtypes
-fileprivate var liveFrameworkObjects: [UnsafeRawPointer:Wrapped] = [:]
-fileprivate var liveSubtypedObjects: [UnsafeRawPointer:Wrapped] = [:]
+var liveFrameworkObjects: [UnsafeRawPointer:Wrapped] = [:]
+var liveSubtypedObjects: [UnsafeRawPointer:Wrapped] = [:]
 
 // Lock for accessing the above
 var tableLock = NIOLock()
@@ -308,10 +318,17 @@ func lookupObject<T:GodotObject> (nativeHandle: UnsafeRawPointer) -> T? {
     if let a = objectFromHandle(nativeHandle: nativeHandle) {
         return a as? T
     }
-    let _result: GString = GString ()
-    let copy = nativeHandle
-    gi.object_method_bind_ptrcall (Object.method_get_class, UnsafeMutableRawPointer (mutating: copy), nil, &_result.content)
-    let className = _result.description
+    var className: String = ""
+    var sc: StringName.ContentType = StringName.zero
+    if gi.object_get_class_name (nativeHandle, library, &sc) != 0 {
+        let sn = StringName(content: sc)
+        className = String(sn)
+    } else {
+        let copy = nativeHandle
+        let _result: GString = GString ()
+        gi.object_method_bind_ptrcall (Object.method_get_class, UnsafeMutableRawPointer (mutating: copy), nil, &_result.content)
+        className = _result.description
+    }
     if let ctor = godotFrameworkCtors [className] {
         return ctor.init (nativeHandle: nativeHandle) as? T
     }
@@ -384,6 +401,7 @@ func freeFunc (_ userData: UnsafeMutableRawPointer?, _ objectHandle: UnsafeMutab
             } else {
                 //print ("SWIFT: Removed object from our live SubType list (type was: \(original.self)")
             }
+            original.handle = Wrapped.invalidHandle
         }
     }
 }

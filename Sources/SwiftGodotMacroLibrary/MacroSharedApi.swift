@@ -25,13 +25,13 @@ func getIdentifier (_ typeSyntax: TypeSyntax?) -> (typeName: String, generics: [
         let genericTypeNames: [String] = identifier
             .genericArgumentClause?
             .arguments
-            .compactMap { $0.as(GenericArgumentSyntax.self) }
+            .compactMap { GenericArgumentSyntax ($0) }
             .compactMap { $0.argument.as(IdentifierTypeSyntax.self) }
             .map { $0.name.text } ?? []
         return (typeName: identifier.name.text, generics: genericTypeNames, isOptional: opt)
     } else if let array = typeSyntax.as(ArrayTypeSyntax.self),
        let elementTypeName = array.element.as(IdentifierTypeSyntax.self)?.name.text {
-        return (typeName: "Array", generics: [elementTypeName], isOptional: opt)
+        return (typeName: "GArray", generics: [elementTypeName], isOptional: opt)
     }
     return nil
 }
@@ -48,6 +48,7 @@ enum GodotMacroError: Error, DiagnosticMessage {
     case expectedIdentifier(PatternBindingListSyntax.Element)
     case unknownError(Error)
     case unsupportedCallableEffect
+    case noSupportForOptionalEnums
     
     var severity: DiagnosticSeverity {
         return .error
@@ -77,6 +78,8 @@ enum GodotMacroError: Error, DiagnosticMessage {
             "@Export optional Collections are not supported"
         case .unsupportedCallableEffect:
             "@Callable does not support asynchronous or throwing functions"
+        case .noSupportForOptionalEnums:
+            "@Export(.enum) does not support optional values for the enumeration"
 		}
     }
     
@@ -146,7 +149,7 @@ func getTypeName (_ parameter: FunctionParameterSyntax) -> String? {
         parameter.isObjectCollection,
         parameter.isVariantCollection
     ].allSatisfy ({ $0 == false }) else {
-        return "Array"
+        return "GArray"
     }
     guard let typeName = parameter.type.as (IdentifierTypeSyntax.self)?.name.text else {
         return nil
@@ -164,7 +167,7 @@ var godotVariants = [
     "Double": ".float",
     "Bool": ".bool",
     "AABB": ".aabb",
-    "Array": ".array",
+    "GArray": ".array",
     "Basis": ".basis",
     "Callable": ".callable",
     "Color": ".color",
